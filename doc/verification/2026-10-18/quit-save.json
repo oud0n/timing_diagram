@@ -1,0 +1,108 @@
+{
+  "formatVersion": 1,
+  "config": {
+    "numCycles": 14,
+    "cycleWidth": 65,
+    "gridVisible": true,
+    "gridSubdivisions": 2,
+    "gridColor": "#e2e8f0",
+    "backgroundColor": "#ffffff",
+    "markerColor": "#ef4444",
+    "timelineVisible": true,
+    "timeUnitLabel": "ns",
+    "timeScale": 10
+  },
+  "signals": [
+    {
+      "id": "sys_clk",
+      "name": "CLK",
+      "type": "clock",
+      "color": "#2563EB",
+      "strokeWidth": 2.5,
+      "height": 40,
+      "waveStr": "01010101010101",
+      "busValues": {},
+      "clockConfig": {
+        "period": 2,
+        "dutyCycle": 50,
+        "phase": 0,
+        "inverted": false
+      }
+    },
+    {
+      "id": "spi_cs",
+      "name": "CE(Chip Select)",
+      "type": "binary",
+      "color": "#dc2626",
+      "strokeWidth": 2.5,
+      "height": 40,
+      "waveStr": "110..........1",
+      "busValues": {}
+    },
+    {
+      "id": "spi_mosi",
+      "name": "MOSI",
+      "type": "bus",
+      "color": "#059669",
+      "strokeWidth": 2.5,
+      "height": 40,
+      "waveStr": "zz0011001101zz",
+      "busValues": {},
+      "isExpanded": true
+    },
+    {
+      "id": "spi_miso",
+      "name": "MISO",
+      "type": "bus",
+      "color": "#7c3aed",
+      "strokeWidth": 2.5,
+      "height": 40,
+      "waveStr": "zzzz0.1.0.1.zz",
+      "busValues": {
+        "5": "0x00",
+        "7": "0xE1",
+        "9": "0xA5"
+      }
+    }
+  ],
+  "markers": [
+    {
+      "id": "m_start",
+      "time": 2,
+      "label": "CE Assert",
+      "color": "#ef4444",
+      "showLine": true
+    },
+    {
+      "id": "m_first_bit",
+      "time": 3,
+      "label": "First Bit Active",
+      "color": "#f59e0b",
+      "showLine": true
+    }
+  ],
+  "constraints": [
+    {
+      "id": "c_setup",
+      "fromSignalId": "spi_cs",
+      "toSignalId": "sys_clk",
+      "fromTime": 2,
+      "toTime": 3,
+      "label": "t_lead = 10ns",
+      "color": "#475569",
+      "style": "dashed",
+      "arrowType": "both"
+    }
+  ],
+  "folds": [],
+  "repeatRanges": [
+    {
+      "id": "rep_burst",
+      "startCycle": 3,
+      "endCycle": 11,
+      "label": "Byte Stream",
+      "count": "4x",
+      "color": "#0284c7"
+    }
+  ]
+}
