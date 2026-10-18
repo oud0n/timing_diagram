@@ -168,7 +168,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
     if (!containerRef.current) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const clientX = (e.clientX - rect.left) * totalWidth / rect.width;
-    if (clientX >= labelWidth) {
+    if (clientX >= labelWidth + scrollLeft) {
       const rawTime = xToTime(clientX);
       const snapped = Math.round(rawTime * 4) / 4;
       const boundedTime = Math.max(0, Math.min(config.numCycles, snapped));
@@ -183,7 +183,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
     if ((e.clientY - e.currentTarget.getBoundingClientRect().top) * totalHeight / e.currentTarget.getBoundingClientRect().height >= topMargin) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const clientX = (e.clientX - rect.left) * totalWidth / rect.width;
-    if (clientX >= labelWidth) {
+    if (clientX >= labelWidth + scrollLeft) {
       const rawTime = xToTime(clientX);
       const snapped = Math.round(rawTime * 2) / 2;
       const boundedTime = Math.max(0, Math.min(config.numCycles, snapped));
@@ -191,8 +191,12 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
     }
   };
 
+  // The sticky label column follows the visible left edge, which starts inside the container padding.
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setScrollLeft(e.currentTarget.scrollLeft);
+    const container = e.currentTarget;
+    const svg = container.querySelector<SVGSVGElement>('svg[data-waveform]');
+    const svgLeft = svg ? svg.getBoundingClientRect().left - container.getBoundingClientRect().left - container.clientLeft + container.scrollLeft : 0;
+    setScrollLeft(Math.max(0, container.scrollLeft - svgLeft));
   };
 
   // Adaptive stepping calculation for large cycle counts (e.g. 100~1000+ cycles)
@@ -436,6 +440,9 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
             const repY = 18;
             const repColor = rep.color || "#0284c7";
             const textContent = `repeat ${countNum}${rep.label ? ` • ${rep.label}` : ""}`;
+            const textWidth = textContent.length * 6.6;
+            const badgeWidth = 22 + textWidth + (onRemoveRepeatRange ? 26 : 10);
+            const badgeLeft = (x1 + x2) / 2 - badgeWidth / 2;
 
             return (
               <g key={`repeat-${rep.id}`} className="group cursor-pointer">
@@ -467,11 +474,11 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
                   strokeWidth={2.5}
                 />
 
-                {/* Center Badge */}
+                {/* Center Badge: dot, text and delete button laid out left to right */}
                 <rect
-                  x={(x1 + x2) / 2 - (textContent.length * 3.3 + 14)}
+                  x={badgeLeft}
                   y={repY - 11}
-                  width={textContent.length * 6.6 + 28}
+                  width={badgeWidth}
                   height={22}
                   rx={11}
                   fill={isDark ? "#0f172a" : "#ffffff"}
@@ -479,15 +486,14 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
                   strokeWidth={1.5}
                 />
                 <circle
-                  cx={(x1 + x2) / 2 - (textContent.length * 3.3 + 4)}
+                  cx={badgeLeft + 12}
                   cy={repY}
                   r={4}
                   fill={repColor}
                 />
                 <text
-                  x={(x1 + x2) / 2 + 4}
+                  x={badgeLeft + 22}
                   y={repY + 3.5}
-                  textAnchor="middle"
                   className={`font-mono text-[11px] font-bold ${isDark ? "fill-white" : "fill-slate-800"}`}
                 >
                   {textContent}
@@ -503,13 +509,13 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
                     className="opacity-60 hover:opacity-100 transition-opacity"
                   >
                     <circle
-                      cx={(x1 + x2) / 2 + (textContent.length * 3.3 + 6)}
+                      cx={badgeLeft + badgeWidth - 13}
                       cy={repY}
                       r={7}
                       fill={isDark ? "#334155" : "#e2e8f0"}
                     />
                     <text
-                      x={(x1 + x2) / 2 + (textContent.length * 3.3 + 6)}
+                      x={badgeLeft + badgeWidth - 13}
                       y={repY + 3}
                       textAnchor="middle"
                       className="fill-rose-500 font-bold text-[9px] cursor-pointer"
@@ -737,7 +743,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
                     if (clickTimer.current) { clearTimeout(clickTimer.current); clickTimer.current = null; }
                     const svg = e.currentTarget.ownerSVGElement!;
                     (document.activeElement as HTMLElement)?.blur?.();
-                    svg.focus();
+                    svg.focus({ preventScroll: true });
                     const bounds = svg.getBoundingClientRect();
                     const x = (e.clientX - bounds.left) * totalWidth / bounds.width;
                     const time = xToTime(x);
