@@ -52,6 +52,11 @@ export function busCellKey(sig: Signal, starts: number[], cycle: number): string
   return `${start === cycle ? "|" : ""}${(sig.busValues[start] || "").trim()}`;
 }
 
+/** A bus has meaningful bits (name suffix, bit expansion) unless it holds text or is 1 bit wide. */
+export function busHasBits(sig: Signal): boolean {
+  return sig.type === "bus" && sig.busFormat !== "string" && (sig.busWidth || 8) > 1;
+}
+
 export const FOLD_BREAK_WIDTH = 44; // width in pixels for a collapsed break section
 
 export interface SanitizedFold extends TimeFold {

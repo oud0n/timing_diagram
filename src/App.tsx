@@ -6,7 +6,7 @@ import { SignalEditor } from "./components/SignalEditor";
 import { MarkerTable } from "./components/MarkerTable";
 import { ConstraintTable } from "./components/ConstraintTable";
 import { RepeatFoldManager } from "./components/RepeatFoldManager";
-import { parseWaveform, INITIAL_DIAGRAM } from "./utils";
+import { parseWaveform, busHasBits, INITIAL_DIAGRAM } from "./utils";
 import { parseDiagram, serializeDiagram } from "./document";
 import { useDiagramHistory } from "./hooks/useDiagramHistory";
 import { serializeWaveformSvg } from "./svgExport";
@@ -792,7 +792,7 @@ export default function App({ gateway: injectedGateway }: { gateway?: FileGatewa
                         </select>
                       </div>
 
-                      <div className="space-y-1">
+                      {sig.busFormat !== "string" && <div className="space-y-1">
                         <label className={`block text-[11px] font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}>
                           Bit Width
                         </label>
@@ -806,9 +806,9 @@ export default function App({ gateway: injectedGateway }: { gateway?: FileGatewa
                             isDark ? "border-slate-700 bg-slate-900 text-slate-100" : "border-slate-300 bg-white text-slate-900"
                           }`}
                         />
-                      </div>
+                      </div>}
 
-                      <button
+                      {busHasBits(sig) && <button
                         onClick={() => {
                           const updated = diagram.signals.map((s) =>
                             s.id === sig.id ? { ...s, isExpanded: !s.isExpanded } : s
@@ -826,7 +826,7 @@ export default function App({ gateway: injectedGateway }: { gateway?: FileGatewa
                         }`}
                       >
                         {sig.isExpanded ? "Collapse Bits" : "Expand Bits"}
-                      </button>
+                      </button>}
                     </div>
                   </div>
                 )}

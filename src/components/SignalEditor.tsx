@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { NumberField } from "./NumberField";
 import { MAX_TIMELINE_CYCLES } from "../timeline";
 import { Signal, SignalType, DiagramConfig } from "../types";
+import { busHasBits } from "../utils";
 import { Plus, Trash, ArrowUp, ArrowDown, Settings, HelpCircle, ChevronDown, ChevronRight } from "lucide-react";
 
 interface SignalEditorProps {
@@ -10,6 +11,8 @@ interface SignalEditorProps {
   theme?: "dark" | "light";
   onUpdateSignals: (newSignals: Signal[]) => void;
 }
+
+const DEFAULT_CLOCK = { period: 2, dutyCycle: 50, phase: 0, inverted: false };
 
 const PRESET_COLORS = [
   "#2563EB", // Blue
@@ -211,7 +214,11 @@ export const SignalEditor: React.FC<SignalEditorProps> = ({
                     {/* Signal type selector */}
                     <select
                       value={sig.type}
-                      onChange={(e) => updateSignal(sig.id, { type: e.target.value as SignalType })}
+                      onChange={(e) => {
+                        const type = e.target.value as SignalType;
+                        // Store the clock settings that the canvas draws, so saved files are explicit.
+                        updateSignal(sig.id, type === "clock" ? { type, clockConfig: sig.clockConfig ?? { ...DEFAULT_CLOCK } } : { type });
+                      }}
                       className={`rounded-lg border text-xs px-2.5 py-1 font-medium cursor-pointer transition-all ${
                         isDark
                           ? "border-slate-700 bg-slate-800 text-slate-200 focus:border-blue-500"
@@ -415,7 +422,7 @@ export const SignalEditor: React.FC<SignalEditorProps> = ({
                             <option value="string">文字列 (String)</option>
                           </select>
                         </div>
-                        <div>
+                        {sig.busFormat !== "string" && <div>
                           <label className={`block mb-1 font-semibold ${isDark ? "text-slate-300" : "text-slate-700"}`}>
                             Bit Width
                           </label>
@@ -429,8 +436,8 @@ export const SignalEditor: React.FC<SignalEditorProps> = ({
                               isDark ? "border-slate-700 bg-slate-900 text-slate-100" : "border-slate-200 bg-white text-slate-800"
                             }`}
                           />
-                        </div>
-                        <div className="col-span-2 flex items-center justify-between pt-1">
+                        </div>}
+                        {busHasBits(sig) && <div className="col-span-2 flex items-center justify-between pt-1">
                           <span className={`font-medium ${isDark ? "text-slate-400" : "text-slate-600"}`}>
                             Bit Expansion View:
                           </span>
@@ -445,7 +452,7 @@ export const SignalEditor: React.FC<SignalEditorProps> = ({
                           >
                             {sig.isExpanded ? "Collapse Bits" : "Expand Bits"}
                           </button>
-                        </div>
+                        </div>}
                       </div>
                     )}
 

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useMemo, useEffect } from "react";
 import { Signal, Marker, Constraint, DiagramConfig, RepeatRange, TimeFold } from "../types";
-import { parseWaveform, busSegmentStarts, createTimelineCoordinateMapper, FOLD_BREAK_WIDTH } from "../utils";
+import { parseWaveform, busSegmentStarts, busHasBits, createTimelineCoordinateMapper, FOLD_BREAK_WIDTH } from "../utils";
 
 import { nextWaveState, visiblePaintRange, WaveState } from "../waveformEditing";
 import { formatTime, formatTimeValue, layoutMarkerLabels, MARKER_LABEL_ROW_HEIGHT } from "../timeline";
@@ -122,7 +122,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
   const renderRows: RenderRow[] = [];
   signals.forEach((sig) => {
     renderRows.push({ type: "signal", signal: sig });
-    if (sig.type === "bus" && sig.isExpanded) {
+    if (busHasBits(sig) && sig.isExpanded) {
       const width = sig.busWidth || 8;
       for (let b = width - 1; b >= 0; b--) {
         renderRows.push({ type: "bit", signal: sig, bitIndex: b, isLastBit: b === 0 });
@@ -161,10 +161,6 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
 
   const getYForSignalIndex = (rowIdx: number): number => {
     return topMargin + rowIdx * rowHeight;
-  };
-
-  const getSignalIndexById = (id: string): number => {
-    return signals.findIndex((s) => s.id === id);
   };
 
   // Convert client cursor coordinate to time cycle units using non-linear inverse mapper
@@ -889,20 +885,32 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
 
           {/* 5. DRAW RELATIONSHIPS / TIMING CONSTRAINTS (ARROWS) */}
           {constraints.map((c) => {
-            const fromIndex = getSignalIndexById(c.fromSignalId);
-            const toIndex = getSignalIndexById(c.toSignalId);
+            // Rows, not signal indices: expanded buses add bit rows above later signals.
+            const rowOf = (id: string) => renderRows.findIndex((r) => r.type === "signal" && r.signal.id === id);
+            const fromIndex = rowOf(c.fromSignalId);
+            const toIndex = rowOf(c.toSignalId);
 
             if (fromIndex === -1 || toIndex === -1) return null;
 
             const xStart = getXForTime(c.fromTime);
             const xEnd = getXForTime(c.toTime);
 
-            const yStart = getYForSignalIndex(fromIndex) + signals[fromIndex].height / 2;
-            const yEnd = getYForSignalIndex(toIndex) + signals[toIndex].height / 2;
+            const yStart = getYForSignalIndex(fromIndex) + renderRows[fromIndex].signal.height / 2;
+            const yEnd = getYForSignalIndex(toIndex) + renderRows[toIndex].signal.height / 2;
 
             let arrowPath = "";
-            let textX = (xStart + xEnd) / 2;
-            let textY = (yStart + yEnd) / 2 - 6;
+            const textX = (xStart + xEnd) / 2;
+            // Put the label in the empty band between rows (nearest to the arrow's middle) so it never covers a waveform.
+            const gapCenter = (k: number) => {
+              const h = renderRows[k].signal.height;
+              return getYForSignalIndex(k) + h + Math.max(0, rowHeight - h) / 2;
+            };
+            const midY = (yStart + yEnd) / 2;
+            let textY = gapCenter(Math.min(fromIndex, toIndex));
+            for (let k = Math.min(fromIndex, toIndex); k < Math.max(fromIndex, toIndex); k++) {
+              if (Math.abs(gapCenter(k) - midY) < Math.abs(textY - midY)) textY = gapCenter(k);
+            }
+            const labelWidth_ = c.label.length * 5.8 + 12;
 
             if (xStart === xEnd || Math.abs(yStart - yEnd) < 10) {
               arrowPath = `M ${xStart} ${yStart} L ${xEnd} ${yEnd}`;
@@ -924,9 +932,9 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
                 />
                 <g>
                   <rect
-                    x={textX - (c.label.length * 4.2 + 6)}
-                    y={textY - 9}
-                    width={c.label.length * 8.4 + 12}
+                    x={textX - labelWidth_ / 2}
+                    y={textY - 8}
+                    width={labelWidth_}
                     height={16}
                     fill={dynamicBgColor}
                     rx={4}
@@ -935,7 +943,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
                   />
                   <text
                     x={textX}
-                    y={textY + 3}
+                    y={textY + 3.5}
                     textAnchor="middle"
                     className={`font-mono text-[9.5px] font-bold ${isDark ? "fill-white" : "fill-slate-700"}`}
                   >
@@ -1041,17 +1049,17 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
 
                       {/* Signal Name */}
                       <text
-                        x={sig.type === "bus" ? 44 : 24}
+                        x={busHasBits(sig) ? 44 : 24}
                         y={midY + 4}
                         className={`${isDark ? "fill-white font-bold" : "fill-slate-800"} font-mono text-xs font-semibold`}
                         textAnchor="start"
                       >
                         {sig.name}
-                        {sig.type === "bus" && `[${(sig.busWidth || 8) - 1}:0]`}
+                        {busHasBits(sig) && `[${(sig.busWidth || 8) - 1}:0]`}
                       </text>
 
                       {/* Expand/Collapse Button */}
-                      {sig.type === "bus" && onUpdateSignals && (
+                      {busHasBits(sig) && onUpdateSignals && (
                         <g data-export-exclude="true"
                           className="cursor-pointer"
                           onClick={(e) => {
