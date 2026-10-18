@@ -3,6 +3,16 @@
 タイミングチャートを SVG で作成・編集する React 19 + TypeScript + Vite アプリです。
 ブラウザ版と Tauri 2 のデスクトップ版を提供します。旧 Electron 版は `legacy-electron-app` ブランチに保持しています。
 
+> **動作確認は macOS（27.0.1 / Apple Silicon）でのみ行っています。** Windows 向けの CI ビルド定義はありますが、Windows・Linux での動作は確認していません。
+
+![エディタ画面（ライトテーマ）](./doc/images/editor-light.jpg)
+
+| 展開バスの直接編集 | ダークテーマ | 未保存変更の確認 |
+| --- | --- | --- |
+| ![展開したバスのセル編集](./doc/images/bus-edit.jpg) | ![ダークテーマ](./doc/images/editor-dark.jpg) | ![終了時の保存・破棄・キャンセル確認](./doc/images/unsaved-prompt.jpg) |
+
+画像は 2026-10-18 の実操作確認で、DMG からインストールした macOS 版を撮影したものです。
+
 ## 起動・検証
 
 Node.js 24 以降と npm を使用します。
@@ -30,6 +40,8 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml
 ```
 
 macOS の成果物は `src-tauri/target/release/bundle/macos/Timing Diagram.app` と `src-tauri/target/release/bundle/dmg/` に生成します。GitHub Actions は Web のテスト・ビルドに加え、手動実行またはバージョンタグで macOS / Windows パッケージを生成する定義があります。GitHub 上での実行と Windows 実機動作は未確認です。Release 公開は自動化していません。
+
+macOS のアプリはバンドル全体を ad-hoc 署名します。Developer ID 署名・公証はしていないため、他の Mac で開く場合は Gatekeeper の確認が必要です。
 
 ## 実装済みの操作
 
@@ -62,7 +74,7 @@ macOS の成果物は `src-tauri/target/release/bundle/macos/Timing Diagram.app`
 
 未保存表示は起動時、読込時、またはデスクトップ版の保存成功時の図との比較です。Undo で同じ図に戻ると表示が解除されます。Copy JSON や SVG 出力は保存済み状態を変更しません。デスクトップ版は同じディレクトリの一時ファイルから置換して保存します。JSON の読込上限は16 MiBです。ブラウザ版の Save はダウンロードとなり、保存済み扱いにはしません。自動保存はありません。
 
-## 構成と今後
+## 構成
 
 - `src/App.tsx`: 画面と操作の接続
 - `src/components/WaveformCanvas.tsx`: SVG 波形描画
@@ -76,4 +88,13 @@ macOS の成果物は `src-tauri/target/release/bundle/macos/Timing Diagram.app`
 - `src/utils.ts`: 波形解析・折り畳み座標・繰り返し検証
 - `tests/`: 回帰テスト
 
-2026-10-10 に macOS 27.0.1 / arm64 で配布 `.app` の起動・編集・保存・再起動後の読込・SVG 出力を確認しました。アプリは約10.45 MiB、DMGは約2.93 MiBです。Developer ID署名・公証は未対応で、実機検証はこのMacのみです。配布版の起動時間、最小ウィンドウでの配置、Windows、DMGからのインストール検証と、マーカーの単位表記・ラベル重なりの修正は残っています。[TODO.md](./TODO.md) に検証範囲と残項目を記録しています。
+## 動作確認
+
+動作確認は macOS でのみ行っています（macOS 27.0.1 / arm64）。2026-10-18 に DMG から `/Applications` へインストールした配布版で、次の操作を確認しました。
+
+- 起動・編集・保存・再起動後の読込・SVG 出力
+- 展開バスと折り畳みを含む編集、横スクロール中のドラッグ塗りと図外でのポインタ解除、表示倍率変更後の編集
+- 入力欄の Cmd+Z、最小ウィンドウ（640×480）での配置、テーマの再起動後の保持
+- 不正 JSON・読取権限なし・書込不可フォルダでのエラー表示と図の保持、未保存終了時の保存・破棄
+
+アプリは約10.39 MiB、DMG は約2.87 MiB です。起動からフロントエンドの準備完了まで約0.4秒です（5回測定、初回は約0.5秒）。Windows・Linux の実機動作、GitHub Actions の実行は未確認です。検証方法と結果は [TODO.md](./TODO.md) に記録しています。
