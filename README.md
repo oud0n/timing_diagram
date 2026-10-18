@@ -1,5 +1,7 @@
 # Timing Diagram
 
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-oud0n-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/oud0n)
+
 タイミングチャートを SVG で作成・編集する React 19 + TypeScript + Vite アプリです。
 ブラウザ版と Tauri 2 のデスクトップ版を提供します。旧 Electron 版はタグ `v3.0.1` で参照できます。
 
@@ -110,6 +112,14 @@ codesign --force --deep --sign - "/Applications/Timing Diagram.app"
 現行形式のバージョンなし JSON も読込可能です。旧 Electron 形式は対応しません。未知のバージョン、不正な値、重複 ID、存在しない信号への参照は拒否し、現在の図を保持します。カラーは `#RGB` または `#RRGGBB`、波形記法は `0 1 z x = . ~ - h l`（大文字も可）です。
 
 未保存表示は起動時、読込時、またはデスクトップ版の保存成功時の図との比較です。Undo で同じ図に戻ると表示が解除されます。Copy JSON や SVG 出力は保存済み状態を変更しません。デスクトップ版は同じディレクトリの一時ファイルから置換して保存します。JSON の読込上限は16 MiBです。ブラウザ版の Save はダウンロードとなり、保存済み扱いにはしません。自動保存はありません。
+
+## 開発者を支援（Buy Me a Coffee）
+
+**Timing Diagram** は個人が空き時間に開発しているプロジェクトです（無料・ソースコード公開）。編集機能の追加や不具合修正、macOS 版のビルドと GitHub Pages 版の維持を続けるため、コーヒー1杯（$3〜）からのご支援をいただけると大変励みになります ☕
+
+👉 **[Buy Me a Coffee で oud0n を支援する](https://buymeacoffee.com/oud0n)**
+
+アプリ内では、ヘッダーの「Support」ボタン、またはデスクトップ版のメニュー「Help → Support the Developer (Buy Me a Coffee)…」から、QR コード付きの支援画面を開けます。デスクトップ版のリンクは既定のブラウザで開きます（開ける URL は支援ページと GitHub リポジトリだけに制限しています）。
 
 ## 構成
 

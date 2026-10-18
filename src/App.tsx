@@ -29,7 +29,9 @@ import {
   RotateCcw,
   Repeat,
   FoldHorizontal,
+  Coffee,
 } from "lucide-react";
+import { DonateModal } from "./components/DonateModal";
 
 export default function App({ gateway: injectedGateway }: { gateway?: FileGateway } = {}) {
   const gateway = useMemo(() => injectedGateway || createFileGateway(), [injectedGateway]);
@@ -68,6 +70,7 @@ export default function App({ gateway: injectedGateway }: { gateway?: FileGatewa
 
   // Drawer / Modal states
   const [configOpen, setConfigOpen] = useState(false);
+  const [donateOpen, setDonateOpen] = useState(false);
   const [repeatFoldOpen, setRepeatFoldOpen] = useState(false);
   const [clipMessage, setClipMessage] = useState<string | null>(null);
   const [jsonPasteOpen, setJsonPasteOpen] = useState(false);
@@ -242,7 +245,7 @@ export default function App({ gateway: injectedGateway }: { gateway?: FileGatewa
   };
 
   const files = useDocumentFiles({
-    diagram, dirty, gateway, markSaved, finishEdit: end, getSvg, notify: showClipMessage, undo, redo,
+    diagram, dirty, gateway, markSaved, finishEdit: end, getSvg, notify: showClipMessage, undo, redo, openDonate: () => setDonateOpen(true),
     load: data => { load(data); setTimelineEndRequest(0); setDocumentEpoch(value => value + 1); setActiveCell(null); setBusLabelEdit(null); setJsonPasteOpen(false); setPendingImport(null); },
   });
   const filesRef = useRef(files); filesRef.current=files;
@@ -297,6 +300,20 @@ export default function App({ gateway: injectedGateway }: { gateway?: FileGatewa
             {['new','open','save','save-as'].map(action => <button key={action} type="button" disabled={files.busy} onClick={() => void files.run(action)} className="rounded border border-slate-500 px-2 py-1 text-xs disabled:opacity-40">{{new:'New',open:'Open',save:'Save','save-as':'Save As'}[action]}</button>)}
             <button type="button" onClick={undo} disabled={!canUndo} className="rounded px-2 py-1 text-xs disabled:opacity-30" title="Undo (Ctrl/Cmd+Z)">Undo</button>
             <button type="button" onClick={redo} disabled={!canRedo} className="rounded px-2 py-1 text-xs disabled:opacity-30" title="Redo (Ctrl/Cmd+Shift+Z)">Redo</button>
+            {/* Support the developer (Buy Me a Coffee) */}
+            <button
+              type="button"
+              onClick={() => setDonateOpen(true)}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
+                isDark
+                  ? "border-amber-500/30 bg-amber-500/15 text-amber-300 hover:bg-amber-500/25"
+                  : "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+              }`}
+              title="Support the developer on Buy Me a Coffee"
+            >
+              <Coffee className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Support</span>
+            </button>
             {/* Theme Switcher Button */}
             <button
               onClick={toggleTheme}
@@ -348,6 +365,7 @@ export default function App({ gateway: injectedGateway }: { gateway?: FileGatewa
         </div>
       </header>
 
+      <DonateModal isOpen={donateOpen} isDark={isDark} onClose={() => setDonateOpen(false)} openUrl={url => { void gateway.openExternal(url).catch(() => showClipMessage("Could not open the browser")); }} />
       {files.confirmOpen && <div role="dialog" aria-label="Unsaved changes" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
         <div className="rounded-xl border border-slate-500 bg-slate-900 p-5 text-white">
           <p className="mb-4">Save changes before continuing?</p>

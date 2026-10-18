@@ -154,7 +154,15 @@ fn install_menu(app: &mut tauri::App) -> tauri::Result<()> {
         true,
         &[&about, &app_separator, &quit],
     )?;
-    let menu = Menu::with_items(app, &[&application, &file, &edit])?;
+    let donate = MenuItem::with_id(
+        app,
+        "donate",
+        "Support the Developer (Buy Me a Coffee)…",
+        true,
+        None::<&str>,
+    )?;
+    let help = Submenu::with_items(app, "Help", true, &[&donate])?;
+    let menu = Menu::with_items(app, &[&application, &file, &edit, &help])?;
     app.set_menu(menu)?;
     Ok(())
 }
@@ -167,6 +175,7 @@ pub fn run() {
         })
         .manage(FileAccess::default())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             install_menu(app)?;
             // Show the window anyway if the frontend never reports ready, e.g. after a script error.
