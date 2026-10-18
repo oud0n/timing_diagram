@@ -1,5 +1,6 @@
 # Timing Diagram
 
+![ライセンス](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-orange)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-oud0n-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/oud0n)
 
 タイミングチャートを SVG で作成・編集する React 19 + TypeScript + Vite アプリです。
@@ -45,7 +46,14 @@ npm run desktop:build  # 配布パッケージ生成
 cargo test --locked --manifest-path src-tauri/Cargo.toml
 ```
 
-macOS の成果物は `src-tauri/target/release/bundle/macos/Timing Diagram.app` と `src-tauri/target/release/bundle/dmg/` に生成します。GitHub Actions は全ブランチへのプッシュで Web のテスト・ビルドを行い、手動実行またはバージョンタグで macOS / Windows パッケージを生成します（成果物は Actions の Artifacts）。Windows はこのビルド成功をもって確認済みとし、実機での確認は対象外です。Release 公開は自動化していません。
+macOS の成果物は `src-tauri/target/release/bundle/macos/Timing Diagram.app` と `src-tauri/target/release/bundle/dmg/` に生成します。GitHub Actions は全ブランチへのプッシュで Web のテスト・ビルドを行い、手動実行またはバージョンタグで macOS / Windows パッケージを生成します。Windows はこのビルド成功をもって確認済みとし、実機での確認は対象外です。
+
+`v4.0.0` のようなタグをプッシュすると、macOS の `.dmg` と Windows の `.exe` / `.msi` を添付した GitHub Release を自動で公開します。タグは `package.json` の `version` と一致させてください（一致しないとビルドを止めます）。`v4.1.0-rc.1` のようにハイフンを含むタグはプレリリースになります。手動実行の成果物は Actions の Artifacts に残ります。
+
+```sh
+git tag v4.0.0
+git push origin v4.0.0
+```
 
 macOS のアプリはバンドル全体を ad-hoc 署名します。Developer ID 署名・公証はしていないため、他の Mac で開く場合は Gatekeeper の確認が必要です。
 
@@ -145,3 +153,13 @@ codesign --force --deep --sign - "/Applications/Timing Diagram.app"
 - 不正 JSON・読取権限なし・書込不可フォルダでのエラー表示と図の保持、未保存終了時の保存・破棄
 
 アプリは約10.39 MiB、DMG は約2.87 MiB です。起動からフロントエンドの準備完了まで約0.4秒です（5回測定、初回は約0.5秒）。ウィンドウは描画完了後に表示するため、起動時に白い画面は出ません。Windows はビルド成功のみの確認で、Windows・Linux の実機確認は対象外です。検証方法と結果は [TODO.md](./TODO.md) に記録しています。
+
+## ライセンス
+
+[PolyForm Noncommercial License 1.0.0](LICENSE)（Copyright 2025-2026 oud0n）
+
+- **非商用であれば自由に使えます**: 個人的な目的（趣味・学習・研究など、商用につながらないもの）での利用と、非営利団体・教育機関・公的な研究機関・政府機関での利用は、改変・再配布を含めて自由です。再配布するときは、`LICENSE`（またはライセンスの URL）と `Required Notice:` の行を一緒に渡してください。
+- **商用利用には事前の許諾が必要です**: 業務での利用、有償の製品・サービスへの組み込み、販売などを考えている方は、[caliber.trivia66@icloud.com](mailto:caliber.trivia66@icloud.com) までご連絡ください。
+- **改変版を公開・配布するときのお願い**: 出どころが分かるよう、次を守ってください。
+  - 本ソフトウェア（[oud0n/timing_diagram](https://github.com/oud0n/timing_diagram)）をもとにしていることと、改変したことを、README など利用者の目に入る場所に書く
+  - 改変版には別の名前を付け、本家の公式版・公認版と誤解されるような名前や表示を使わない

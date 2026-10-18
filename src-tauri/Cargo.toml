@@ -2,7 +2,8 @@
 name = "timing_diagram"
 version = "4.0.0"
 description = "Timing diagram editor"
-authors = ["Timing Diagram contributors"]
+authors = ["oud0n"]
+license-file = "../LICENSE"
 edition = "2021"
 
 [lib]
