@@ -46,7 +46,14 @@ npm run desktop:build  # 配布パッケージ生成
 cargo test --locked --manifest-path src-tauri/Cargo.toml
 ```
 
-macOS の成果物は `src-tauri/target/release/bundle/macos/Timing Diagram.app` と `src-tauri/target/release/bundle/dmg/` に生成します。GitHub Actions は全ブランチへのプッシュで Web のテスト・ビルドを行い、手動実行またはバージョンタグで macOS / Windows パッケージを生成します（成果物は Actions の Artifacts）。Windows はこのビルド成功をもって確認済みとし、実機での確認は対象外です。Release 公開は自動化していません。
+macOS の成果物は `src-tauri/target/release/bundle/macos/Timing Diagram.app` と `src-tauri/target/release/bundle/dmg/` に生成します。GitHub Actions は全ブランチへのプッシュで Web のテスト・ビルドを行い、手動実行またはバージョンタグで macOS / Windows パッケージを生成します。Windows はこのビルド成功をもって確認済みとし、実機での確認は対象外です。
+
+`v4.0.0` のようなタグをプッシュすると、macOS の `.dmg` と Windows の `.exe` / `.msi` を添付した GitHub Release を自動で公開します。タグは `package.json` の `version` と一致させてください（一致しないとビルドを止めます）。`v4.1.0-rc.1` のようにハイフンを含むタグはプレリリースになります。手動実行の成果物は Actions の Artifacts に残ります。
+
+```sh
+git tag v4.0.0
+git push origin v4.0.0
+```
 
 macOS のアプリはバンドル全体を ad-hoc 署名します。Developer ID 署名・公証はしていないため、他の Mac で開く場合は Gatekeeper の確認が必要です。
 
