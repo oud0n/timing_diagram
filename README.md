@@ -3,7 +3,9 @@
 タイミングチャートを SVG で作成・編集する React 19 + TypeScript + Vite アプリです。
 ブラウザ版と Tauri 2 のデスクトップ版を提供します。旧 Electron 版は `legacy-electron-app` ブランチに保持しています。
 
-> **動作確認は macOS（27.0.1 / Apple Silicon）でのみ行っています。** Windows 向けの CI ビルド定義はありますが、Windows・Linux での動作は確認していません。
+> **動作確認は macOS（27.0.1 / Apple Silicon）でのみ行っています。** Windows は GitHub Actions でのビルド成功のみを確認しており、Windows・Linux での実機動作は確認していません。
+
+ブラウザ版は GitHub Pages で公開します: https://oud0n.github.io/timing_diagram/
 
 ![エディタ画面（ライトテーマ）](./doc/images/editor-light.jpg)
 
@@ -31,6 +33,8 @@ npm run build    # 型チェックと本番ビルド（dist/）
 npm run preview  # ビルド済み Web アプリの確認
 ```
 
+`main` へのプッシュで `.github/workflows/pages.yml` がテスト・ビルドし、`dist/` を GitHub Pages へデプロイします。ビルドは相対パス（Vite の `base: './'`）なので、リポジトリ名のサブパスでもデスクトップ版でも同じ成果物が動きます。リポジトリの Settings → Pages の Source は「GitHub Actions」に設定しています。ブラウザ版の保存はファイルのダウンロードで、読込はファイル選択です。
+
 デスクトップ版は Rust / Cargo と各 OS のネイティブ開発環境も必要です。
 
 ```sh
@@ -39,7 +43,7 @@ npm run desktop:build  # 配布パッケージ生成
 cargo test --locked --manifest-path src-tauri/Cargo.toml
 ```
 
-macOS の成果物は `src-tauri/target/release/bundle/macos/Timing Diagram.app` と `src-tauri/target/release/bundle/dmg/` に生成します。GitHub Actions は Web のテスト・ビルドに加え、手動実行またはバージョンタグで macOS / Windows パッケージを生成する定義があります。GitHub 上での実行と Windows 実機動作は未確認です。Release 公開は自動化していません。
+macOS の成果物は `src-tauri/target/release/bundle/macos/Timing Diagram.app` と `src-tauri/target/release/bundle/dmg/` に生成します。GitHub Actions は全ブランチへのプッシュで Web のテスト・ビルドを行い、手動実行またはバージョンタグで macOS / Windows パッケージを生成します（成果物は Actions の Artifacts）。Windows はこのビルド成功をもって確認済みとし、実機動作は未確認です。Release 公開は自動化していません。
 
 macOS のアプリはバンドル全体を ad-hoc 署名します。Developer ID 署名・公証はしていないため、他の Mac で開く場合は Gatekeeper の確認が必要です。
 
@@ -97,4 +101,4 @@ macOS のアプリはバンドル全体を ad-hoc 署名します。Developer ID
 - 入力欄の Cmd+Z、最小ウィンドウ（640×480）での配置、テーマの再起動後の保持
 - 不正 JSON・読取権限なし・書込不可フォルダでのエラー表示と図の保持、未保存終了時の保存・破棄
 
-アプリは約10.39 MiB、DMG は約2.87 MiB です。起動からフロントエンドの準備完了まで約0.4秒です（5回測定、初回は約0.5秒）。Windows・Linux の実機動作、GitHub Actions の実行は未確認です。検証方法と結果は [TODO.md](./TODO.md) に記録しています。
+アプリは約10.39 MiB、DMG は約2.87 MiB です。起動からフロントエンドの準備完了まで約0.4秒です（5回測定、初回は約0.5秒）。ウィンドウは描画完了後に表示するため、起動時に白い画面は出ません。Windows はビルド成功のみの確認で、Windows・Linux の実機動作は未確認です。検証方法と結果は [TODO.md](./TODO.md) に記録しています。
