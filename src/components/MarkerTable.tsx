@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Marker, DiagramConfig } from "../types";
 import { Plus, Trash, EyeOff, Tag } from "lucide-react";
+import { formatTime } from "../timeline";
 
 interface MarkerTableProps {
   markers: Marker[];
@@ -74,7 +75,7 @@ export const MarkerTable: React.FC<MarkerTableProps> = ({
 
         <div>
           <label className={`block text-[11px] font-semibold mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
-            Time Position ({config.timeUnitLabel})
+            Position (cycle)
           </label>
           <input
             type="number"
@@ -136,7 +137,7 @@ export const MarkerTable: React.FC<MarkerTableProps> = ({
                 <span className={`font-mono text-[11px] px-2 py-0.5 rounded-md ${
                   isDark ? "bg-slate-800 text-slate-300 border border-slate-700" : "bg-slate-100 text-slate-700 border border-slate-200"
                 }`}>
-                  {m.time} {config.timeUnitLabel} ({Math.round(m.time * config.timeScale)}s)
+                  Cycle {m.time} ({formatTime(m.time, config)})
                 </span>
               </div>
 

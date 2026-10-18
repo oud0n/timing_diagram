@@ -12,7 +12,7 @@ import { serializeWaveformSvg } from "./svgExport";
 import { createFileGateway, FileGateway } from "./fileGateway";
 import { useDocumentFiles } from "./hooks/useDocumentFiles";
 import { clockToBinary, paintWaveCells, WaveState } from "./waveformEditing";
-import { MAX_TIMELINE_CYCLES, timelineLength } from "./timeline";
+import { MAX_TIMELINE_CYCLES, formatTime, timelineLength } from "./timeline";
 import {
   Download,
   Copy,
@@ -690,7 +690,7 @@ export default function App({ gateway: injectedGateway }: { gateway?: FileGatewa
                     <span className={`px-2 py-0.5 rounded font-mono text-xs ${
                       isDark ? "bg-slate-900 border border-slate-800 text-slate-300" : "bg-white border border-slate-200 text-slate-700"
                     }`}>
-                      Cycle {activeCell.cycleIndex} ({activeCell.cycleIndex * diagram.config.timeScale} {diagram.config.timeUnitLabel})
+                      Cycle {activeCell.cycleIndex} ({formatTime(activeCell.cycleIndex, diagram.config)})
                     </span>
                   </div>
 

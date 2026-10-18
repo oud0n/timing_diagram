@@ -3,6 +3,7 @@ import { Signal, Marker, Constraint, DiagramConfig, RepeatRange, TimeFold } from
 import { parseWaveform, createTimelineCoordinateMapper, FOLD_BREAK_WIDTH } from "../utils";
 
 import { nextWaveState, visiblePaintRange, WaveState } from "../waveformEditing";
+import { formatTime, formatTimeValue, layoutMarkerLabels, MARKER_LABEL_ROW_HEIGHT } from "../timeline";
 
 interface WaveformCanvasProps {
   config: DiagramConfig;
@@ -102,14 +103,20 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
   const labelWidth = 145; // width of label sidebar inside SVG
   const hasRepeats = repeatRanges && repeatRanges.length > 0;
   const repeatDeckHeight = hasRepeats ? 30 : 0;
-  const topMargin = 45 + repeatDeckHeight; // space for repeat deck + timeline ruler
-  const rowHeight = 65;   // vertical height of each signal track
-  const bottomMargin = 30; // buffer area at the bottom
-
   // Coordinate Mapper for non-linear horizontal folds & repeat omissions
   const { timeToX, xToTime, sanitizedFolds, totalCalculatedWidth } = useMemo(() => {
     return createTimelineCoordinateMapper(config, folds, repeatRanges, labelWidth);
   }, [config, folds, repeatRanges, labelWidth]);
+
+  // Marker labels get their own deck between the repeat banners and the ruler.
+  const markerText = (m: Marker) => `${m.label} (${formatTime(m.time, config)})`;
+  const markerBoxes = layoutMarkerLabels(markers.map(m => ({ id: m.id, x: timeToX(m.time), text: markerText(m) })), labelWidth + 2);
+  const markerRows = markers.length ? Math.max(...[...markerBoxes.values()].map(b => b.row)) + 1 : 0;
+  const markerDeckTop = repeatDeckHeight + 4;
+  const markerDeckHeight = markerRows ? markerRows * MARKER_LABEL_ROW_HEIGHT + 4 : 0;
+  const topMargin = 45 + repeatDeckHeight + markerDeckHeight; // repeat deck + marker labels + timeline ruler
+  const rowHeight = 65;   // vertical height of each signal track
+  const bottomMargin = 30; // buffer area at the bottom
 
   // Construct renderRows dynamically based on bus signal isExpanded state
   const renderRows: RenderRow[] = [];
@@ -298,7 +305,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
                 ? "text-blue-400 bg-blue-950/60 border-blue-900/40"
                 : "text-blue-600 bg-blue-50 border-blue-200"
             }`}>
-              Offset: {hoveredTimeline} {config.timeUnitLabel} ({Math.round(hoveredTimeline * config.timeScale)} ns)
+              Offset: cycle {hoveredTimeline} ({formatTime(hoveredTimeline, config)})
             </span>
           )}
         </div>
@@ -378,6 +385,11 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
           {config.timelineVisible &&
             tickIndices.map((i) => {
               const x = getXForTime(i);
+              // Keep numbers clear of the fold badge and of the signal name column.
+              const foldStart = sanitizedFolds.some((f) => f.start === i);
+              const foldEnd = sanitizedFolds.some((f) => f.end === i);
+              const anchor = i === 0 || foldEnd ? "start" : foldStart ? "end" : "middle";
+              const textX = anchor === "start" ? x + 4 : anchor === "end" ? x - 4 : x;
               return (
                 <g key={`timeline-tick-${i}`}>
                   <line
@@ -389,12 +401,12 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
                     strokeWidth={1.5}
                   />
                   <text
-                    x={x}
+                    x={textX}
                     y={topMargin - 12}
-                    textAnchor="middle"
+                    textAnchor={anchor}
                     className={`${isDark ? "fill-white font-semibold" : "fill-slate-500"} font-mono text-[11px] font-medium`}
                   >
-                    {Math.round(i * config.timeScale)}
+                    {formatTimeValue(i, config.timeScale)}
                   </text>
                 </g>
               );
@@ -939,9 +951,12 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
           {/* 6. DRAW CUSTOM TIMELINE MARKERS */}
           {markers.map((m) => {
             const x = getXForTime(m.time);
+            const box = markerBoxes.get(m.id)!;
+            const boxY = markerDeckTop + box.row * MARKER_LABEL_ROW_HEIGHT;
 
             return (
               <g key={`marker-elm-${m.id}`} className="group cursor-col-resize">
+                <line x1={x} y1={boxY + 16} x2={x} y2={topMargin - 15} stroke={m.color} strokeWidth={1} />
                 {m.showLine && (
                   <line
                     x1={x}
@@ -958,21 +973,14 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
                     points={`${x},${topMargin - 5} ${x - 5},${topMargin - 15} ${x + 5},${topMargin - 15}`}
                     fill={m.color}
                   />
-                  <rect
-                    x={x - (m.label.length * 3.5 + 8)}
-                    y={topMargin - 32}
-                    width={m.label.length * 7 + 16}
-                    height={16}
-                    fill={m.color}
-                    rx={3}
-                  />
+                  <rect x={box.left} y={boxY} width={box.width} height={16} fill={m.color} rx={3} />
                   <text
-                    x={x}
-                    y={topMargin - 20}
+                    x={box.left + box.width / 2}
+                    y={boxY + 11.5}
                     textAnchor="middle"
                     className="fill-white font-mono text-[9px] font-semibold"
                   >
-                    {m.label} ({Math.round(m.time * config.timeScale)}s)
+                    {markerText(m)}
                   </text>
                 </g>
               </g>
