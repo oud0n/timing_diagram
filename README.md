@@ -47,6 +47,39 @@ macOS の成果物は `src-tauri/target/release/bundle/macos/Timing Diagram.app`
 
 macOS のアプリはバンドル全体を ad-hoc 署名します。Developer ID 署名・公証はしていないため、他の Mac で開く場合は Gatekeeper の確認が必要です。
 
+## macOS で「壊れているため開けません」と表示される場合
+
+配布する macOS 版は Apple Silicon（arm64）専用です。Intel Mac では動作しません。
+
+ブラウザ等でダウンロードした DMG からアプリを起動すると、「“Timing Diagram”は壊れているため開けません。ゴミ箱に入れる必要があります。」と表示される場合があります。
+
+**原因:** 本アプリは個人開発のため、有償の Apple Developer Program による Developer ID 署名と公証（Notarization）を付けていません。macOS の Gatekeeper は、ダウンロードしたファイルに検疫属性（`com.apple.quarantine`）を付け、公証のないアプリの起動を止めます。ファイルが実際に壊れているわけではありません。
+
+**解決方法:**
+
+1. DMG 内の `Timing Diagram.app` を「アプリケーション（/Applications）」フォルダにコピーします。
+2. ターミナルで次のコマンドを実行します。
+
+```bash
+xattr -cr "/Applications/Timing Diagram.app"
+```
+
+- `xattr`: macOS の拡張ファイル属性を表示・操作する標準コマンドです。
+- `-c`: すべての拡張属性を消去します。ダウンロード時に付いた検疫属性（`com.apple.quarantine`）を外すことで、Gatekeeper による起動のブロックを解除します。
+- `-r`: アプリバンドル（.app）内のすべてのファイルに再帰的に適用します。
+
+**それでも開かない場合:** macOS のセキュリティポリシーによっては、署名の扱いが厳しく起動できないことがあります。その場合は、手元で ad-hoc 署名をやり直してください。
+
+```bash
+codesign --force --deep --sign - "/Applications/Timing Diagram.app"
+```
+
+- `--force`: 既存の署名を上書きします。
+- `--deep`: バンドル内のすべてのコードに再帰的に署名します。
+- `--sign -`: Developer ID の代わりに ad-hoc 署名（`-`）を使い、このMacでのローカル実行を許可する署名を作ります。
+
+実行後、通常どおりダブルクリックするか、Control キーを押しながらクリックして「開く」を選んでください。
+
 ## 実装済みの操作
 
 - 信号の追加・削除・並べ替え、波形文字列・色・線幅の設定
