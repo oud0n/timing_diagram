@@ -43,7 +43,7 @@ npm run desktop:build  # 配布パッケージ生成
 cargo test --locked --manifest-path src-tauri/Cargo.toml
 ```
 
-macOS の成果物は `src-tauri/target/release/bundle/macos/Timing Diagram.app` と `src-tauri/target/release/bundle/dmg/` に生成します。GitHub Actions は全ブランチへのプッシュで Web のテスト・ビルドを行い、手動実行またはバージョンタグで macOS / Windows パッケージを生成します（成果物は Actions の Artifacts）。Windows はこのビルド成功をもって確認済みとし、実機動作は未確認です。Release 公開は自動化していません。
+macOS の成果物は `src-tauri/target/release/bundle/macos/Timing Diagram.app` と `src-tauri/target/release/bundle/dmg/` に生成します。GitHub Actions は全ブランチへのプッシュで Web のテスト・ビルドを行い、手動実行またはバージョンタグで macOS / Windows パッケージを生成します（成果物は Actions の Artifacts）。Windows はこのビルド成功をもって確認済みとし、実機での確認は対象外です。Release 公開は自動化していません。
 
 macOS のアプリはバンドル全体を ad-hoc 署名します。Developer ID 署名・公証はしていないため、他の Mac で開く場合は Gatekeeper の確認が必要です。
 
@@ -134,4 +134,4 @@ codesign --force --deep --sign - "/Applications/Timing Diagram.app"
 - 入力欄の Cmd+Z、最小ウィンドウ（640×480）での配置、テーマの再起動後の保持
 - 不正 JSON・読取権限なし・書込不可フォルダでのエラー表示と図の保持、未保存終了時の保存・破棄
 
-アプリは約10.39 MiB、DMG は約2.87 MiB です。起動からフロントエンドの準備完了まで約0.4秒です（5回測定、初回は約0.5秒）。ウィンドウは描画完了後に表示するため、起動時に白い画面は出ません。Windows はビルド成功のみの確認で、Windows・Linux の実機動作は未確認です。検証方法と結果は [TODO.md](./TODO.md) に記録しています。
+アプリは約10.39 MiB、DMG は約2.87 MiB です。起動からフロントエンドの準備完了まで約0.4秒です（5回測定、初回は約0.5秒）。ウィンドウは描画完了後に表示するため、起動時に白い画面は出ません。Windows はビルド成功のみの確認で、Windows・Linux の実機確認は対象外です。検証方法と結果は [TODO.md](./TODO.md) に記録しています。

@@ -89,7 +89,7 @@ React 19 + Vite + SVG の既存エディタを基盤に、旧版の直接波形�
 ## 6. 配布と最終検証
 
 - [x] macOS の `.app` / `.dmg` をビルドし、開発サーバーなしで起動・編集・保存・SVG 出力を確認する（2026-10-18 にDMGから `/Applications` へインストールして確認）
-- [x] Windows 用 CI ビルドを整え、成果物と実機動作を検証する。ビルド成功と実機検証を区別して記録する（Windows 環境がないため、ユーザー指示によりCIのビルド成功をもって完了。実機動作は未確認）
+- [x] Windows 用 CI ビルドを整え、成果物と実機動作を検証する。ビルド成功と実機検証を区別して記録する（Windows 環境がないため、ユーザー指示によりCIのビルド成功をもって完了。実機確認は対象外）
 - [x] GitHub Actions に Tauri 用の配布処理を追加する（2026-10-18 にGitHub上で実行成功）
 - [x] アプリアイコン、バージョン、成果物名を整える。署名・公証の対応状況を記録する（Developer ID署名・公証は未対応）
 - [x] パッケージサイズ・起動時間を測定し、測定環境と方法を記録する（末尾の2026-10-18記録）
@@ -101,7 +101,7 @@ React 19 + Vite + SVG の既存エディタを基盤に、旧版の直接波形�
 
 データ検証、波形編集、履歴、反復検出など破損・回帰につながるロジックには小さな自動テストを用意する。ポインタ操作、ダイアログ、メニュー、配布アプリは実操作で確認する。段階ごとに型チェック・ビルドと対象機能の検証を行い、未確認項目を完了扱いにしない。
 
-全段階完了。Windows・Linux の実機動作は未確認。チェック済み項目も実装確認と実機検証の範囲を区別する。
+全段階完了。Windows・Linux の実機確認は対象外。チェック済み項目も実装確認と実機検証の範囲を区別する。
 
 ## 段階1〜2の検証記録（2026-10-07）
 
@@ -191,5 +191,5 @@ React 19 + Vite + SVG の既存エディタを基盤に、旧版の直接波形�
 
 - PR #10 で `dev` を `main` へマージ
 - Verify Web Editor（ubuntu-latest）: `npm test`・`npm run build` 成功（`dev` のプッシュ、PR、`main` のプッシュ）
-- Build Desktop Packages（`main` で手動実行）: macos-latest・windows-latest とも成功。Windows では `npm test` 28件、`cargo test` 2件（権限テストはUnixのみ）成功し、`Timing Diagram_1.0.0_x64_en-US.msi` と `Timing Diagram_1.0.0_x64-setup.exe` を生成。Windows はユーザー指示によりビルド成功をもって確認済みとし、実機動作は未確認
+- Build Desktop Packages（`main` で手動実行）: macos-latest・windows-latest とも成功。Windows では `npm test` 28件、`cargo test` 2件（権限テストはUnixのみ）成功し、`Timing Diagram_1.0.0_x64_en-US.msi` と `Timing Diagram_1.0.0_x64-setup.exe` を生成。Windows はユーザー指示によりビルド成功をもって確認済みとし、実機確認は対象外
 - GitHub Pages: Source を GitHub Actions に設定し、Deploy GitHub Pages が成功。https://oud0n.github.io/timing_diagram/ で画面表示とコンソールエラーなしを確認。Vite の `base: './'` で同じビルドがサブパスとTauriの両方で動く
