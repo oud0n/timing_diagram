@@ -1,5 +1,7 @@
 # Timing Diagram
 
+**日本語** | [English](README.en.md)
+
 ![ライセンス](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-orange)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-oud0n-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/oud0n)
 
@@ -17,6 +19,13 @@
 | ![展開したバスのセル編集](./doc/images/bus-edit.jpg) | ![ダークテーマ](./doc/images/editor-dark.jpg) | ![終了時の保存・破棄・キャンセル確認](./doc/images/unsaved-prompt.jpg) |
 
 画像は 2026-10-18 の実操作確認で、DMG からインストールした macOS 版を撮影したものです。
+
+## ダウンロード
+
+[Releases](https://github.com/oud0n/timing_diagram/releases/latest) からインストーラをダウンロードしてください。
+
+- macOS（Apple Silicon 専用）: `Timing.Diagram_<バージョン>_aarch64.dmg`
+- Windows: `Timing.Diagram_<バージョン>_x64-setup.exe` または `Timing.Diagram_<バージョン>_x64_en-US.msi`
 
 ## 起動・検証
 

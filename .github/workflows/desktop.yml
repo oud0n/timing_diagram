@@ -75,6 +75,6 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
           body: |
-            - macOS: `Timing.Diagram_*_aarch64.dmg`（Apple Silicon 専用）。Developer ID 署名・公証をしていないため、「壊れているため開けません」と表示された場合は [README の手順](https://github.com/oud0n/timing_diagram#macos-で壊れているため開けませんと表示される場合) で `xattr -cr` を実行してください。
+            - macOS: `Timing.Diagram_*_aarch64.dmg`（Apple Silicon 専用）。Developer ID 署名・公証をしていないため、「壊れているため開けません」と表示された場合は [README の手順](https://github.com/oud0n/timing_diagram#macos-で壊れているため開けませんと表示される場合) で `xattr -cr` を実行してください（[English](https://github.com/oud0n/timing_diagram/blob/main/README.en.md#if-macos-says-the-app-is-damaged-and-cant-be-opened)）。
             - Windows: `*_x64-setup.exe`（NSIS）または `*_x64_en-US.msi`。動作確認は macOS のみで、Windows はビルド成功のみ確認しています。
             - ブラウザ版: https://oud0n.github.io/timing_diagram/
