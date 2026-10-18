@@ -3446,7 +3446,7 @@ dependencies = [
 
 [[package]]
 name = "timing_diagram"
-version = "1.0.0"
+version = "4.0.0"
 dependencies = [
  "serde",
  "serde_json",

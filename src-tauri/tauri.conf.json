@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Timing Diagram",
-  "version": "1.0.0",
+  "version": "4.0.0",
   "identifier": "com.timingchart.editor",
   "build": {
     "beforeDevCommand": "npm run dev",

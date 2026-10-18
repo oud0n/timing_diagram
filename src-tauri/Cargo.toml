@@ -1,6 +1,6 @@
 [package]
 name = "timing_diagram"
-version = "1.0.0"
+version = "4.0.0"
 description = "Timing diagram editor"
 authors = ["Timing Diagram contributors"]
 edition = "2021"
