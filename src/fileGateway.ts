@@ -1,6 +1,7 @@
 import { isTauri, invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { openUrl } from '@tauri-apps/plugin-opener';
 export interface OpenedFile { path: string; content: string }
 export interface FileGateway {
   native: boolean;
@@ -10,6 +11,7 @@ export interface FileGateway {
   quit(): Promise<void>;
   subscribe(action: (name: string) => void, close: () => void): Promise<() => void>;
   title(value: string): Promise<void>;
+  openExternal(url: string): Promise<void>;
 }
 export function downloadText(content: string, name: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
@@ -25,6 +27,8 @@ export function createFileGateway(): FileGateway {
     close: () => getCurrentWindow().destroy(),
     quit: () => invoke('exit_editor'),
     title: value => getCurrentWindow().setTitle(value),
+    // Opens in the default browser; the capability only allows the support and repository pages.
+    openExternal: url => openUrl(url),
     subscribe: async (action, close) => {
       const stopAction = await listen<string>('editor-action', event => action(event.payload));
       try {
@@ -55,5 +59,6 @@ export function createFileGateway(): FileGateway {
       return path || `timing_diagram.${kind}`;
     },
     close: async () => {}, quit: async () => {}, title: async value => { document.title=value; }, subscribe: async () => () => {},
+    openExternal: async url => { window.open(url, '_blank', 'noopener,noreferrer'); },
   };
 }

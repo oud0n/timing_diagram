@@ -8,7 +8,7 @@ interface Options {
   diagram: TimingDiagramData; dirty: boolean; gateway: FileGateway;
   load: (diagram: TimingDiagramData) => void; markSaved: (written: TimingDiagramData) => void;
   finishEdit: () => void; getSvg: () => string; notify: (message: string) => void;
-  undo: () => void; redo: () => void;
+  undo: () => void; redo: () => void; openDonate: () => void;
 }
 export function useDocumentFiles(options: Options) {
   const [path, setPath] = useState<string | null>(null);
@@ -41,6 +41,7 @@ export function useDocumentFiles(options: Options) {
   };
   const run = async (action: string) => {
     if (running.current) return;
+    if (action==='donate') { latest.current.openDonate(); return; }
     if (action==='undo' || action==='redo') {
       const focused=document.activeElement;
       if (focused instanceof HTMLElement && focused.matches('input,textarea,[contenteditable="true"]')) document.execCommand?.(action);
