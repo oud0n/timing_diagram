@@ -10,7 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [{ "label": "main", "title": "Timing Diagram", "width": 1280, "height": 850, "minWidth": 640, "minHeight": 480 }],
+    "windows": [{ "label": "main", "title": "Timing Diagram", "width": 1280, "height": 850, "minWidth": 640, "minHeight": 480, "visible": false }],
     "security": { "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src ipc: http://ipc.localhost" }
   },
   "bundle": {

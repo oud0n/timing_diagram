@@ -94,8 +94,16 @@ async fn save_document(
     .await
     .map_err(|e| e.to_string())?
 }
+/// The window starts hidden so the webview's default white page never shows before the theme is applied.
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
 #[tauri::command]
-fn frontend_ready(startup: tauri::State<Startup>) {
+fn frontend_ready(app: tauri::AppHandle, startup: tauri::State<Startup>) {
+    show_main_window(&app);
     if !startup
         .reported
         .swap(true, std::sync::atomic::Ordering::Relaxed)
@@ -161,6 +169,13 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             install_menu(app)?;
+            // Show the window anyway if the frontend never reports ready, e.g. after a script error.
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_secs(3));
+                let main = handle.clone();
+                let _ = handle.run_on_main_thread(move || show_main_window(&main));
+            });
             Ok(())
         })
         .on_menu_event(|app, event| {
