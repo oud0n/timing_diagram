@@ -33,7 +33,7 @@ npm run build    # 型チェックと本番ビルド（dist/）
 npm run preview  # ビルド済み Web アプリの確認
 ```
 
-`main` へのプッシュで `.github/workflows/pages.yml` がテスト・ビルドし、`dist/` を GitHub Pages へデプロイします。ビルドは相対パス（Vite の `base: './'`）なので、リポジトリ名のサブパスでもデスクトップ版でも同じ成果物が動きます。リポジトリの Settings → Pages の Source は「GitHub Actions」に設定しています。ブラウザ版の保存はファイルのダウンロードで、読込はファイル選択です。
+`main` へのプッシュで `.github/workflows/pages.yml` がテスト・ビルドし、`dist/` を GitHub Pages へデプロイします。ビルドは相対パス（Vite の `base: './'`）なので、リポジトリ名のサブパスでもデスクトップ版でも同じ成果物が動きます。リポジトリの Settings → Pages の Source は「GitHub Actions」に設定しています。ブラウザ版の保存はファイルのダウンロードで、読込はファイル選択です。Pages 版だけはアクセス数の計測に GoatCounter のスクリプトを読み込みます（ワークフローの `GOATCOUNTER_URL` を指定したビルドのみ）。デスクトップ版とローカルのビルドには含めません。
 
 デスクトップ版は Rust / Cargo と各 OS のネイティブ開発環境も必要です。
 
