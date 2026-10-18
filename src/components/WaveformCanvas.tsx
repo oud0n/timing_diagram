@@ -1,15 +1,23 @@
-import React, { useRef, useState, useMemo } from "react";
+import React, { useRef, useState, useMemo, useEffect } from "react";
 import { Signal, Marker, Constraint, DiagramConfig, RepeatRange, TimeFold } from "../types";
 import { parseWaveform, createTimelineCoordinateMapper, FOLD_BREAK_WIDTH } from "../utils";
 
+import { nextWaveState, visiblePaintRange, WaveState } from "../waveformEditing";
+
 interface WaveformCanvasProps {
   config: DiagramConfig;
+  timelineEndRequest?: number;
   signals: Signal[];
   markers: Marker[];
   constraints: Constraint[];
   repeatRanges?: RepeatRange[];
   folds?: TimeFold[];
   theme?: "dark" | "light";
+  activeCell?: { signalId: string; cycleIndex: number } | null;
+  onPaintCells?: (signalId: string, cycles: number[], state: WaveState) => void;
+  onPaintStart?: () => void;
+  onPaintEnd?: () => void;
+  onBusLabelEdit?: (signalId: string, cycleIndex: number) => void;
   onCanvasClick?: (signalId: string, cycleIndex: number, clientX: number, clientY: number) => void;
   onTimelineDoubleClick?: (time: number) => void;
   onMarkerMove?: (markerId: string, newTime: number) => void;
@@ -64,13 +72,14 @@ const parseBusValueToNumber = (val: string, format: 'hex' | 'dec' | 'bin' | 'str
 
 export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
   config,
+  timelineEndRequest = 0,
   signals,
   markers,
   constraints,
   repeatRanges = [],
   folds = [],
   theme = "dark",
-  onCanvasClick,
+  onCanvasClick, activeCell, onPaintCells, onPaintStart, onPaintEnd, onBusLabelEdit,
   onTimelineDoubleClick,
   onMarkerMove,
   onUpdateSignals,
@@ -80,6 +89,13 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredCycle, setHoveredCycle] = useState<{ signalId: string; cycle: number } | null>(null);
   const [hoveredTimeline, setHoveredTimeline] = useState<number | null>(null);
+  const drag = useRef<{ pointer: number; signalId: string; first: number; last: number; state: WaveState; moved: boolean; deferred: boolean; visited: Set<number> } | null>(null);
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const finish = () => { if (drag.current) { drag.current = null; onPaintEnd?.(); } };
+    window.addEventListener('blur', finish);
+    return () => { window.removeEventListener('blur', finish); if (clickTimer.current) clearTimeout(clickTimer.current); finish(); };
+  }, [onPaintEnd]);
   const [scrollLeft, setScrollLeft] = useState(0);
 
   // Layout geometry constants
@@ -107,8 +123,10 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
     }
   });
 
+  // Resolve each parent once, rather than reparsing it for every bit/cycle.
+  const parsedSignals = useMemo(() => new Map(signals.map(sig => [sig.id, parseWaveform(sig.waveStr, config.numCycles)])), [signals, config.numCycles]);
   const getBitState = (sig: Signal, cycleI: number, bitIndex: number): '0' | '1' | 'z' | 'x' => {
-    const waveStates = parseWaveform(sig.waveStr, config.numCycles);
+    const waveStates = parsedSignals.get(sig.id)!;
     const cycleState = waveStates[cycleI] || "0";
     if (cycleState === "1") return "1";
     if (cycleState === "0") return "0";
@@ -125,6 +143,9 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
 
   const totalWidth = Math.max(800, totalCalculatedWidth);
   const totalHeight = topMargin + renderRows.length * rowHeight + bottomMargin;
+  useEffect(() => {
+    if (timelineEndRequest && containerRef.current) containerRef.current.scrollLeft = totalWidth;
+  }, [timelineEndRequest]);
 
   const getXForTime = (time: number): number => {
     return timeToX(time);
@@ -142,7 +163,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
   const handleTimelineInteraction = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!containerRef.current) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const clientX = e.clientX - rect.left;
+    const clientX = (e.clientX - rect.left) * totalWidth / rect.width;
     if (clientX >= labelWidth) {
       const rawTime = xToTime(clientX);
       const snapped = Math.round(rawTime * 4) / 4;
@@ -155,8 +176,9 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
 
   const handleDoubleClick = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!onTimelineDoubleClick) return;
+    if ((e.clientY - e.currentTarget.getBoundingClientRect().top) * totalHeight / e.currentTarget.getBoundingClientRect().height >= topMargin) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const clientX = e.clientX - rect.left;
+    const clientX = (e.clientX - rect.left) * totalWidth / rect.width;
     if (clientX >= labelWidth) {
       const rawTime = xToTime(clientX);
       const snapped = Math.round(rawTime * 2) / 2;
@@ -171,7 +193,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
 
   // Adaptive stepping calculation for large cycle counts (e.g. 100~1000+ cycles)
   const minTickPixelSpacing = 50;
-  const rawCyclesPerTick = Math.max(1, Math.ceil(minTickPixelSpacing / config.cycleWidth));
+  const rawCyclesPerTick = Math.max(1, Math.ceil(Math.max(minTickPixelSpacing / config.cycleWidth, config.numCycles / 2000)));
   const niceSteps = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000];
   const tickStep = niceSteps.find((s) => s >= rawCyclesPerTick) || Math.pow(10, Math.ceil(Math.log10(rawCyclesPerTick)));
 
@@ -197,8 +219,8 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
   tickIndices.sort((a, b) => a - b);
 
   // Determine grid line intervals
-  const gridStep = config.cycleWidth >= 18 ? 1 : tickStep;
-  const canDrawSubdivisions = config.gridVisible && config.gridSubdivisions > 1 && (config.cycleWidth / config.gridSubdivisions) >= 12;
+  const gridStep = tickStep;
+  const canDrawSubdivisions = config.numCycles <= 2000 && config.gridVisible && config.gridSubdivisions > 1 && (config.cycleWidth / config.gridSubdivisions) >= 12;
 
   const isDark = theme === "dark";
   const dynamicBgColor = isDark ? "#0F172A" : "#FFFFFF";
@@ -282,6 +304,9 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
         </div>
 
         <svg
+          data-waveform="true"
+          tabIndex={0}
+          aria-label="Timing waveform"
           width={totalWidth}
           height={totalHeight}
           className="select-none font-sans"
@@ -461,7 +486,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
 
                 {/* Delete button on hover / click */}
                 {onRemoveRepeatRange && (
-                  <g
+                  <g data-export-exclude="true"
                     onClick={(e) => {
                       e.stopPropagation();
                       onRemoveRepeatRange(rep.id);
@@ -504,7 +529,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
                 waveStates.push(getBitState(sig, c, bitIndex));
               }
             } else {
-              waveStates = parseWaveform(sig.waveStr, config.numCycles);
+              waveStates = parsedSignals.get(sig.id)!;
             }
 
             interface WaveSegment {
@@ -547,7 +572,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
                 />
 
                 {/* Row Hover Background */}
-                <rect
+                <rect data-export-exclude="true"
                   x={labelWidth}
                   y={rowY}
                   width={totalWidth - labelWidth}
@@ -627,131 +652,32 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
                   // Discrete states: '0', '1', 'z', 'x', '='
                   <g>
                     {/* Undefined (X) runs */}
-                    {segments
-                      .filter((seg) => seg.state === "x")
-                      .map((seg, segI) => {
-                        const startX = getXForTime(seg.startCycle);
-                        const endX = getXForTime(seg.endCycle);
-                        return (
-                          <rect
-                            key={`hatch-${sig.id}-${row.bitIndex ?? "p"}-${segI}`}
-                            x={startX + 1.5}
-                            y={highY}
-                            width={Math.max(0, endX - startX - 3)}
-                            height={lowY - highY}
-                            fill="url(#hatch-gray)"
-                          />
-                        );
-                      })}
+                    <path fill="url(#hatch-gray)" d={segments.filter(seg => seg.state === 'x').map(seg => {
+                      const x = getXForTime(seg.startCycle) + 1.5;
+                      const width = Math.max(0, getXForTime(seg.endCycle) - x - 1.5);
+                      return `M ${x} ${highY} h ${width} v ${lowY - highY} h ${-width} Z`;
+                    }).join(' ')} />
 
                     {/* Horizontal lines */}
-                    {segments.map((seg, segI) => {
-                      const startX = getXForTime(seg.startCycle);
-                      const endX = getXForTime(seg.endCycle);
-                      const lines: React.ReactNode[] = [];
-
-                      if (seg.state === "1") {
-                        lines.push(
-                          <line
-                            key={`seg-1-${sig.id}-${segI}`}
-                            x1={startX}
-                            y1={highY}
-                            x2={endX}
-                            y2={highY}
-                            stroke={sig.color}
-                            strokeWidth={sig.strokeWidth}
-                            strokeLinecap="round"
-                          />
-                        );
-                      } else if (seg.state === "0") {
-                        lines.push(
-                          <line
-                            key={`seg-0-${sig.id}-${segI}`}
-                            x1={startX}
-                            y1={lowY}
-                            x2={endX}
-                            y2={lowY}
-                            stroke={sig.color}
-                            strokeWidth={sig.strokeWidth}
-                            strokeLinecap="round"
-                          />
-                        );
-                      } else if (seg.state === "z") {
-                        lines.push(
-                          <line
-                            key={`seg-z-${sig.id}-${segI}`}
-                            x1={startX}
-                            y1={midY}
-                            x2={endX}
-                            y2={midY}
-                            stroke={sig.color}
-                            strokeWidth={sig.strokeWidth}
-                            strokeDasharray="4 4"
-                            strokeLinecap="round"
-                          />
-                        );
-                      } else if (seg.state === "x" || seg.state === "=") {
-                        lines.push(
-                          <line
-                            key={`seg-top-${sig.id}-${segI}`}
-                            x1={startX}
-                            y1={highY}
-                            x2={endX}
-                            y2={highY}
-                            stroke={sig.color}
-                            strokeWidth={sig.strokeWidth}
-                            strokeLinecap="round"
-                          />,
-                          <line
-                            key={`seg-bot-${sig.id}-${segI}`}
-                            x1={startX}
-                            y1={lowY}
-                            x2={endX}
-                            y2={lowY}
-                            stroke={sig.color}
-                            strokeWidth={sig.strokeWidth}
-                            strokeLinecap="round"
-                          />
-                        );
-                      }
-
-                      // Vertical transition
-                      if (segI < segments.length - 1) {
-                        const nextSeg = segments[segI + 1];
-                        const transX = endX;
-                        const isBothSingle =
-                          ["1", "0", "z"].includes(seg.state) && ["1", "0", "z"].includes(nextSeg.state);
-                        if (isBothSingle) {
-                          lines.push(
-                            <line
-                              key={`trans-${sig.id}-${segI}`}
-                              x1={transX}
-                              y1={getLevelY(seg.state)}
-                              x2={transX}
-                              y2={getLevelY(nextSeg.state)}
-                              stroke={sig.color}
-                              strokeWidth={sig.strokeWidth}
-                              strokeLinecap="round"
-                            />
-                          );
-                        } else {
-                          lines.push(
-                            <line
-                              key={`trans-full-${sig.id}-${segI}`}
-                              x1={transX}
-                              y1={highY}
-                              x2={transX}
-                              y2={lowY}
-                              stroke={sig.color}
-                              strokeWidth={sig.strokeWidth}
-                              strokeLinecap="round"
-                            />
-                          );
+                    {(() => {
+                      const solid: string[] = [], dashed: string[] = [];
+                      const line = (out: string[], x1: number, y1: number, x2: number, y2: number) => out.push(`M ${x1} ${y1} L ${x2} ${y2}`);
+                      segments.forEach((seg, i) => {
+                        const startX = getXForTime(seg.startCycle), endX = getXForTime(seg.endCycle);
+                        if (seg.state === '0' || seg.state === '1') line(solid, startX, getLevelY(seg.state), endX, getLevelY(seg.state));
+                        else if (seg.state === 'z') line(dashed, startX, midY, endX, midY);
+                        else { line(solid, startX, highY, endX, highY); line(solid, startX, lowY, endX, lowY); }
+                        const next = segments[i + 1];
+                        if (next) {
+                          const single = ['0','1','z'].includes(seg.state) && ['0','1','z'].includes(next.state);
+                          line(solid, endX, single ? getLevelY(seg.state) : highY, endX, single ? getLevelY(next.state) : lowY);
                         }
-                      }
-
-                      return <g key={`run-${sig.id}-${segI}`}>{lines}</g>;
-                    })}
+                      });
+                      return <>
+                        <path d={solid.join(' ')} fill="none" stroke={sig.color} strokeWidth={sig.strokeWidth} strokeLinecap="round" />
+                        <path d={dashed.join(' ')} fill="none" stroke={sig.color} strokeWidth={sig.strokeWidth} strokeLinecap="round" strokeDasharray="4 4" />
+                      </>;
+                    })()}
 
                     {/* Bus value text labels */}
                     {row.type === "signal" &&
@@ -792,32 +718,75 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
                   </g>
                 )}
 
-                {/* Click and hover target mapped with xToTime */}
-                <rect
-                  x={labelWidth}
-                  y={rowY}
-                  width={totalWidth - labelWidth}
-                  height={sig.height}
-                  fill="transparent"
-                  className="cursor-pointer"
-                  onClick={(e) => {
-                    if (!onCanvasClick) return;
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const clientX = e.clientX - rect.left + labelWidth;
-                    const time = Math.floor(xToTime(clientX));
-                    if (time >= 0 && time < config.numCycles) {
-                      onCanvasClick(sig.id, time, e.clientX, e.clientY);
-                    }
+                {activeCell?.signalId === sig.id && row.type === 'signal' && !sanitizedFolds.some(f => activeCell.cycleIndex >= f.start && activeCell.cycleIndex < f.end) && (
+                  <rect data-export-exclude="true" x={timeToX(activeCell.cycleIndex)} y={rowY} width={timeToX(activeCell.cycleIndex + 1) - timeToX(activeCell.cycleIndex)} height={sig.height} fill="none" stroke="#3b82f6" strokeWidth={2} pointerEvents="none" />
+                )}
+                {/* Pointer capture keeps the entire gesture on the initial signal. */}
+                {row.type === 'signal' && <rect data-export-exclude="true" data-signal-hit={sig.id}
+                  x={labelWidth} y={rowY} width={totalWidth - labelWidth} height={sig.height}
+                  fill="transparent" className="cursor-pointer" style={{ touchAction: 'none' }}
+                  onPointerDown={e => {
+                    if (e.button !== 0) return;
+                    e.preventDefault(); e.stopPropagation();
+                    if (clickTimer.current) { clearTimeout(clickTimer.current); clickTimer.current = null; }
+                    const svg = e.currentTarget.ownerSVGElement!;
+                    (document.activeElement as HTMLElement)?.blur?.();
+                    svg.focus();
+                    const bounds = svg.getBoundingClientRect();
+                    const x = (e.clientX - bounds.left) * totalWidth / bounds.width;
+                    const time = xToTime(x);
+                    const cycle = Math.floor(time);
+                    if (x < labelWidth + scrollLeft || time >= config.numCycles || sanitizedFolds.some(f => time >= f.start && time < f.end)) return;
+                    onCanvasClick?.(sig.id, cycle, e.clientX, e.clientY);
+                    if (sig.type === 'clock') return;
+                    e.currentTarget.setPointerCapture?.(e.pointerId);
+                    const deferred = sig.type === 'bus';
+                    drag.current = { pointer: e.pointerId, signalId: sig.id, first: cycle, last: cycle, state: nextWaveState(sig, cycle, config.numCycles), moved: false, deferred, visited: new Set() };
+                    onPaintStart?.();
+                    if (!deferred) { drag.current.visited.add(cycle); onPaintCells?.(sig.id, [cycle], drag.current.state); }
                   }}
-                  onMouseMove={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const clientX = e.clientX - rect.left + labelWidth;
-                    const time = Math.floor(xToTime(clientX));
-                    if (time >= 0 && time < config.numCycles) {
-                      setHoveredCycle({ signalId: sig.id, cycle: time });
-                    }
+                  onPointerMove={e => {
+                    const svg = e.currentTarget.ownerSVGElement!;
+                    const bounds = svg.getBoundingClientRect();
+                    const x = (e.clientX - bounds.left) * totalWidth / bounds.width;
+                    const y = (e.clientY - bounds.top) * totalHeight / bounds.height;
+                    const time = xToTime(x);
+                    const cycle = Math.floor(time);
+                    if (x >= labelWidth + scrollLeft && time < config.numCycles && !sanitizedFolds.some(f => time >= f.start && time < f.end)) setHoveredCycle({ signalId: sig.id, cycle });
+                    const gesture = drag.current;
+                    if (!gesture || gesture.pointer !== e.pointerId || y < rowY || y > rowY + sig.height || x < labelWidth + scrollLeft || time >= config.numCycles) return;
+                    if (cycle !== gesture.first) gesture.moved = true;
+                    if (!gesture.moved) return;
+                    const cells = visiblePaintRange(gesture.last, cycle, config.numCycles, sanitizedFolds).filter(c => !gesture.visited.has(c));
+                    cells.forEach(c => gesture.visited.add(c));
+                    gesture.last = cycle;
+                    if (cells.length) onPaintCells?.(gesture.signalId, cells, gesture.state);
                   }}
-                />
+                  onPointerUp={e => {
+                    const gesture = drag.current;
+                    if (!gesture || gesture.pointer !== e.pointerId) return;
+                    drag.current = null;
+                    onPaintEnd?.();
+                    if (gesture.deferred && !gesture.moved) {
+                      clickTimer.current = setTimeout(() => {
+                        clickTimer.current = null; onPaintStart?.();
+                        onPaintCells?.(gesture.signalId, [gesture.first], gesture.state); onPaintEnd?.();
+                      }, 300);
+                    }
+                    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+                  }}
+                  onPointerCancel={() => { drag.current = null; onPaintEnd?.(); }}
+                  onLostPointerCapture={() => { if (drag.current) { drag.current = null; onPaintEnd?.(); } }}
+                  onDoubleClick={e => {
+                    e.stopPropagation();
+                    if (clickTimer.current) { clearTimeout(clickTimer.current); clickTimer.current = null; }
+                    const bounds = e.currentTarget.ownerSVGElement!.getBoundingClientRect();
+                    const x = (e.clientX - bounds.left) * totalWidth / bounds.width;
+                    const time = xToTime(x);
+                    const cycle = Math.floor(time);
+                    if (sig.type === 'bus' && x >= labelWidth + scrollLeft && time < config.numCycles && !sanitizedFolds.some(f => time >= f.start && time < f.end) && parseWaveform(sig.waveStr, config.numCycles)[cycle] === '=') onBusLabelEdit?.(sig.id, cycle);
+                  }}
+                />}
               </g>
             );
           })}
@@ -893,7 +862,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
                     ≈ {omittedCount}
                   </text>
                   {onRemoveFold && (
-                    <text
+                    <text data-export-exclude="true"
                       x={midX + 16}
                       y={topMargin - 13.5}
                       textAnchor="middle"
@@ -1011,7 +980,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
           })}
 
           {/* 7. STICKY SIGNAL LABEL SIDEBAR PINNED ON SCROLL */}
-          <g transform={`translate(${scrollLeft}, 0)`}>
+          <g data-sticky-labels="true" transform={`translate(${scrollLeft}, 0)`}>
             {/* Sidebar background and divider line */}
             <rect
               x={0}
@@ -1076,7 +1045,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
 
                       {/* Expand/Collapse Button */}
                       {sig.type === "bus" && onUpdateSignals && (
-                        <g
+                        <g data-export-exclude="true"
                           className="cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { MAX_TIMELINE_CYCLES } from "../timeline";
 import { Signal, SignalType, DiagramConfig } from "../types";
 import { Plus, Trash, ArrowUp, ArrowDown, Settings, HelpCircle, ChevronDown, ChevronRight } from "lucide-react";
 
@@ -190,8 +191,8 @@ export const SignalEditor: React.FC<SignalEditorProps> = ({
                         <input
                           type="text"
                           value={sig.waveStr}
-                          maxLength={config.numCycles}
-                          onChange={(e) => updateSignal(sig.id, { waveStr: e.target.value })}
+                          maxLength={MAX_TIMELINE_CYCLES}
+                          onChange={(e) => updateSignal(sig.id, { waveStr: e.target.value.replace(/[^01zx=.~\-hl]/gi, "") })}
                           className={`w-full font-mono text-xs rounded-lg border px-2.5 py-1 transition-all ${
                             isDark
                               ? "bg-slate-950/60 border-slate-750 text-slate-100 placeholder-slate-500 focus:border-blue-500"
@@ -424,7 +425,7 @@ export const SignalEditor: React.FC<SignalEditorProps> = ({
                             min="1"
                             max="32"
                             value={sig.busWidth || 8}
-                            onChange={(e) => updateSignal(sig.id, { busWidth: parseInt(e.target.value) || 8 })}
+                            onChange={(e) => updateSignal(sig.id, { busWidth: Math.min(32, Math.max(1, parseInt(e.target.value) || 8)) })}
                             className={`w-full rounded-lg border px-2.5 py-1 text-xs font-mono focus:outline-none focus:border-blue-500 ${
                               isDark ? "border-slate-700 bg-slate-900 text-slate-100" : "border-slate-200 bg-white text-slate-800"
                             }`}

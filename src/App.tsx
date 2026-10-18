@@ -1,11 +1,18 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Signal, Marker, Constraint, DiagramConfig, TimingDiagramData, RepeatRange, TimeFold } from "./types";
 import { WaveformCanvas } from "./components/WaveformCanvas";
 import { SignalEditor } from "./components/SignalEditor";
 import { MarkerTable } from "./components/MarkerTable";
 import { ConstraintTable } from "./components/ConstraintTable";
 import { RepeatFoldManager } from "./components/RepeatFoldManager";
-import { INITIAL_DIAGRAM } from "./utils";
+import { parseWaveform, INITIAL_DIAGRAM } from "./utils";
+import { parseDiagram, serializeDiagram } from "./document";
+import { useDiagramHistory } from "./hooks/useDiagramHistory";
+import { serializeWaveformSvg } from "./svgExport";
+import { createFileGateway, FileGateway } from "./fileGateway";
+import { useDocumentFiles } from "./hooks/useDocumentFiles";
+import { clockToBinary, paintWaveCells, WaveState } from "./waveformEditing";
+import { MAX_TIMELINE_CYCLES, timelineLength } from "./timeline";
 import {
   Download,
   Copy,
@@ -23,14 +30,40 @@ import {
   FoldHorizontal,
 } from "lucide-react";
 
-export default function App() {
+export default function App({ gateway: injectedGateway }: { gateway?: FileGateway } = {}) {
+  const gateway = useMemo(() => injectedGateway || createFileGateway(), [injectedGateway]);
   // Theme state: default to dark, supports instant toggling
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">(() => { try { return window.localStorage.getItem("timing-editor-theme") === "light" ? "light" : "dark"; } catch { return "dark"; } });
   const isDark = theme === "dark";
 
   // Core diagram state
-  const [diagram, setDiagram] = useState<TimingDiagramData>(INITIAL_DIAGRAM);
+  const { diagram, edit: editDiagram, dirty, canUndo, canRedo, undo, redo, begin, end, load, markSaved } = useDiagramHistory(INITIAL_DIAGRAM);
+  const [documentEpoch, setDocumentEpoch] = useState(0);
+  const [timelineEndRequest, setTimelineEndRequest] = useState(0);
   const [activeCell, setActiveCell] = useState<{ signalId: string; cycleIndex: number } | null>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
+  useEffect(() => {
+    if (activeCell && (!diagram.signals.some(s => s.id === activeCell.signalId) || activeCell.cycleIndex >= diagram.config.numCycles)) setActiveCell(null);
+  }, [diagram, activeCell]);
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      if (!(target instanceof window.Element) || target.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
+        if (gateway.native) return;
+        event.preventDefault();
+        if (event.shiftKey) redo(); else undo();
+      } else if (!event.metaKey && !event.ctrlKey && !event.altKey && (event.key === '0' || event.key === '1') && activeCell) {
+        event.preventDefault();
+        paintCellState(event.key);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [undo, redo, activeCell, diagram, gateway]);
 
   // Drawer / Modal states
   const [configOpen, setConfigOpen] = useState(false);
@@ -38,6 +71,16 @@ export default function App() {
   const [clipMessage, setClipMessage] = useState<string | null>(null);
   const [jsonPasteOpen, setJsonPasteOpen] = useState(false);
   const [jsonPasteText, setJsonPasteText] = useState("");
+  const [jsonImportError, setJsonImportError] = useState<string | null>(null);
+  const [busLabelEdit, setBusLabelEdit] = useState<{ signalId: string; cycleIndex: number; value: string } | null>(null);
+  const [pendingImport, setPendingImport] = useState<TimingDiagramData | null>(null);
+
+  const setDiagram = (update: TimingDiagramData | ((d: TimingDiagramData) => TimingDiagramData)) => {
+    try { editDiagram(update); }
+    catch (err) { showClipMessage(`Edit rejected: ${err instanceof Error ? err.message : String(err)}`); }
+  };
+
+  useEffect(() => { try { window.localStorage.setItem("timing-editor-theme", theme); } catch {} }, [theme]);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
@@ -54,6 +97,7 @@ export default function App() {
     setDiagram((prev) => ({
       ...prev,
       signals: newSignals,
+      config: { ...prev.config, numCycles: timelineLength(prev.config.numCycles, newSignals.map(s => s.waveStr.length)) },
     }));
   };
 
@@ -107,36 +151,25 @@ export default function App() {
     setActiveCell({ signalId, cycleIndex });
   };
 
-  const paintCellState = (stateChar: string) => {
-    if (!activeCell) return;
-    const { signalId, cycleIndex } = activeCell;
-
-    const sig = diagram.signals.find((s) => s.id === signalId);
-    if (!sig) return;
-
-    let currentWave = sig.waveStr.padEnd(diagram.config.numCycles, ".");
-    const charArray = currentWave.split("");
-    charArray[cycleIndex] = stateChar;
-    const updatedWave = charArray.join("");
-
-    const updatedSignals = diagram.signals.map((s) => {
-      if (s.id === signalId) {
-        const updatedBusValues = { ...s.busValues };
-        if (stateChar !== "=") {
-          delete updatedBusValues[cycleIndex];
-        } else {
-          updatedBusValues[cycleIndex] = updatedBusValues[cycleIndex] || "DATA";
-        }
-        return {
-          ...s,
-          waveStr: updatedWave,
-          busValues: updatedBusValues,
-        };
-      }
-      return s;
-    });
-
-    updateSignals(updatedSignals);
+  const paintCells = (signalId: string, cycles: number[], state: WaveState) => {
+    setDiagram(prev => paintWaveCells(prev, signalId, cycles, state));
+  };
+  const paintCellState = (state: WaveState) => {
+    if (activeCell) paintCells(activeCell.signalId, [activeCell.cycleIndex], state);
+  };
+  const openBusLabel = (signalId: string, cycleIndex: number) => {
+    const signal = diagram.signals.find(s => s.id === signalId);
+    if (!signal || signal.type !== 'bus') return;
+    setActiveCell({ signalId, cycleIndex });
+    setBusLabelEdit({ signalId, cycleIndex, value: signal.busValues[cycleIndex] || '' });
+  };
+  const commitBusLabel = () => {
+    if (!busLabelEdit) return;
+    end();
+    setDiagram(prev => ({ ...prev, signals: prev.signals.map(s => s.id === busLabelEdit.signalId ? {
+      ...s, busValues: { ...s.busValues, [busLabelEdit.cycleIndex]: busLabelEdit.value },
+    } : s) }));
+    setBusLabelEdit(null);
   };
 
   const handleTimelineDoubleClick = (time: number) => {
@@ -152,79 +185,83 @@ export default function App() {
     updateMarkers([...diagram.markers, newMarker]);
   };
 
-  const triggerSvgDownload = () => {
-    try {
-      const svgEl = document.querySelector("svg");
-      if (!svgEl) return;
-
-      const clone = svgEl.cloneNode(true) as SVGElement;
-      const elementsToHide = clone.querySelectorAll(".cursor-pointer, rect[fill='transparent']");
-      elementsToHide.forEach((el) => el.remove());
-
-      const svgString = new XMLSerializer().serializeToString(clone);
-      const blob = new Blob([`<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n${svgString}`], {
-        type: "image/svg+xml;charset=utf-8",
-      });
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `timing_diagram_${Date.now()}.svg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error(err);
-    }
+  const getSvg = () => {
+    const svg = canvasRef.current?.querySelector<SVGSVGElement>('svg[data-waveform]');
+    if (!svg) throw new Error("Waveform is unavailable");
+    return serializeWaveformSvg(svg);
   };
 
-  const triggerCopySvgToClipboard = () => {
+  const triggerSvgDownload = () => { void files.run('export-svg'); };
+
+  const triggerCopySvgToClipboard = async () => {
     try {
-      const svgEl = document.querySelector("svg");
-      if (!svgEl) return;
-
-      const clone = svgEl.cloneNode(true) as SVGElement;
-      const elementsToHide = clone.querySelectorAll(".cursor-pointer, rect[fill='transparent']");
-      elementsToHide.forEach((el) => el.remove());
-
-      const svgString = new XMLSerializer().serializeToString(clone);
-      navigator.clipboard.writeText(svgString);
+      await navigator.clipboard.writeText(getSvg());
       showClipMessage("SVG copied to clipboard");
-    } catch (err) {
-      showClipMessage("Clipboard access restricted");
+    } catch {
+      showClipMessage("SVG copy failed: clipboard unavailable");
     }
   };
 
-  const exportJsonConfig = () => {
-    const str = JSON.stringify(diagram, null, 2);
-    navigator.clipboard.writeText(str);
-    showClipMessage("JSON configuration copied");
+  const exportJsonConfig = async () => {
+    try {
+      await navigator.clipboard.writeText(serializeDiagram(diagram));
+      showClipMessage("JSON configuration copied");
+    } catch (err) {
+      showClipMessage(`JSON copy failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
+  const applyImport = (obj: TimingDiagramData) => {
+    load(obj);
+    setDocumentEpoch(value => value + 1);
+    setActiveCell(null);
+    setBusLabelEdit(null);
+    files.clearPath();
+    setJsonPasteOpen(false);
+    setJsonPasteText("");
+    setJsonImportError(null);
+    setPendingImport(null);
+    showClipMessage("Diagram loaded successfully");
   };
 
   const handleJsonImportSubmit = () => {
     try {
-      const obj = JSON.parse(jsonPasteText);
-      if (obj.config && obj.signals) {
-        setDiagram(obj);
-        setJsonPasteOpen(false);
-        setJsonPasteText("");
-        showClipMessage("Diagram loaded successfully");
-      }
-    } catch (err: any) {
-      alert(`Invalid JSON format: ${err.message}`);
+      const obj = parseDiagram(jsonPasteText);
+      if (dirty) { setPendingImport(obj); return; }
+      applyImport(obj);
+    } catch (err) {
+      setJsonImportError(`Invalid JSON format: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
   const showClipMessage = (msg: string) => {
     setClipMessage(msg);
-    setTimeout(() => {
-      setClipMessage(null);
-    }, 3000);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setClipMessage(null), 3000);
   };
+
+  const files = useDocumentFiles({
+    diagram, dirty, gateway, markSaved, finishEdit: end, getSvg, notify: showClipMessage, undo, redo,
+    load: data => { load(data); setTimelineEndRequest(0); setDocumentEpoch(value => value + 1); setActiveCell(null); setBusLabelEdit(null); setJsonPasteOpen(false); setPendingImport(null); },
+  });
+  const filesRef = useRef(files); filesRef.current=files;
+  useEffect(() => {
+    const shortcut = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+      const key=event.key.toLowerCase();
+      const action=key==='s'?(event.shiftKey?'save-as':'save'):key==='o'?'open':key==='e'?'export-svg':key==='n'?'new':null;
+      // Native menu accelerators must receive the key's default handling.
+      if (action && !gateway.native) { event.preventDefault(); void filesRef.current.run(action); }
+    };
+    window.addEventListener('keydown',shortcut); return()=>window.removeEventListener('keydown',shortcut);
+  },[gateway]);
 
   return (
     <div
+      onFocusCapture={(e) => {
+        if ((e.target as HTMLElement).matches('input:not([type="checkbox"]), textarea')) begin();
+      }}
+      onBlurCapture={end}
       className={`min-h-screen font-sans antialiased transition-colors duration-200 pb-16 ${
         isDark
           ? "bg-slate-950 text-slate-200 selection:bg-blue-600/40 selection:text-white"
@@ -246,16 +283,19 @@ export default function App() {
             </div>
             <div>
               <h1 className={`text-sm sm:text-base font-bold tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>
-                Timing Diagram Editor
+                Timing Diagram
               </h1>
               <p className={`text-[11px] font-medium ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                Digital Hardware & Waveform Specification
+                {files.path?.split(/[\\/]/).pop() || "Untitled"} · {dirty ? "Unsaved changes" : "Unchanged"}
               </p>
             </div>
           </div>
 
           {/* App Bar Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {['new','open','save','save-as'].map(action => <button key={action} type="button" disabled={files.busy} onClick={() => void files.run(action)} className="rounded border border-slate-500 px-2 py-1 text-xs disabled:opacity-40">{{new:'New',open:'Open',save:'Save','save-as':'Save As'}[action]}</button>)}
+            <button type="button" onClick={undo} disabled={!canUndo} className="rounded px-2 py-1 text-xs disabled:opacity-30" title="Undo (Ctrl/Cmd+Z)">Undo</button>
+            <button type="button" onClick={redo} disabled={!canRedo} className="rounded px-2 py-1 text-xs disabled:opacity-30" title="Redo (Ctrl/Cmd+Shift+Z)">Redo</button>
             {/* Theme Switcher Button */}
             <button
               onClick={toggleTheme}
@@ -307,6 +347,16 @@ export default function App() {
         </div>
       </header>
 
+      {files.confirmOpen && <div role="dialog" aria-label="Unsaved changes" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="rounded-xl border border-slate-500 bg-slate-900 p-5 text-white">
+          <p className="mb-4">Save changes before continuing?</p>
+          <div className="flex gap-3">
+            <button type="button" onClick={() => files.answer('save')} className="rounded bg-blue-600 px-3 py-2">Save changes</button>
+            <button type="button" onClick={() => files.answer('discard')} className="rounded border px-3 py-2">Discard changes</button>
+            <button type="button" autoFocus onClick={() => files.answer('cancel')} className="rounded border px-3 py-2">Cancel action</button>
+          </div>
+        </div>
+      </div>}
       {/* Main Container */}
       <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 space-y-4">
         {/* Toast Notification */}
@@ -341,14 +391,15 @@ export default function App() {
             <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-6 text-xs">
               <div>
                 <label className={`block font-medium mb-1 ${isDark ? "text-slate-400" : "text-slate-600"}`}>
-                  Total Cycles (1-1000)
+                  Total Cycles (2–100,000)
                 </label>
                 <input
                   type="number"
                   min="2"
-                  max="1000"
+                  max={MAX_TIMELINE_CYCLES}
+                  aria-label="Total Cycles"
                   value={diagram.config.numCycles}
-                  onChange={(e) => updateConfig({ numCycles: Math.min(1000, Math.max(2, parseInt(e.target.value) || 10)) })}
+                  onChange={(e) => updateConfig({ numCycles: Math.min(MAX_TIMELINE_CYCLES, Math.max(2, parseInt(e.target.value) || 10)) })}
                   className={`w-full rounded-lg border px-2.5 py-1.5 font-mono text-xs focus:outline-none focus:border-blue-500 ${
                     isDark ? "border-slate-750 bg-slate-950 text-slate-100" : "border-slate-200 bg-slate-50 text-slate-900"
                   }`}
@@ -357,14 +408,14 @@ export default function App() {
 
               <div>
                 <label className={`block font-medium mb-1 ${isDark ? "text-slate-400" : "text-slate-600"}`}>
-                  Cycle Width (px)
+                  Cycle Width (24–200 px)
                 </label>
                 <input
                   type="number"
                   min="24"
                   max="200"
                   value={diagram.config.cycleWidth}
-                  onChange={(e) => updateConfig({ cycleWidth: parseInt(e.target.value) || 65 })}
+                  onChange={(e) => updateConfig({ cycleWidth: Math.min(200, Math.max(24, parseInt(e.target.value) || 65)) })}
                   className={`w-full rounded-lg border px-2.5 py-1.5 font-mono text-xs focus:outline-none focus:border-blue-500 ${
                     isDark ? "border-slate-750 bg-slate-950 text-slate-100" : "border-slate-200 bg-slate-50 text-slate-900"
                   }`}
@@ -380,7 +431,7 @@ export default function App() {
                   min="0.1"
                   max="10000"
                   value={diagram.config.timeScale}
-                  onChange={(e) => updateConfig({ timeScale: parseFloat(e.target.value) || 10 })}
+                  onChange={(e) => updateConfig({ timeScale: Math.min(10000, Math.max(0.1, parseFloat(e.target.value) || 10)) })}
                   className={`w-full rounded-lg border px-2.5 py-1.5 font-mono text-xs focus:outline-none focus:border-blue-500 ${
                     isDark ? "border-slate-750 bg-slate-950 text-slate-100" : "border-slate-200 bg-slate-50 text-slate-900"
                   }`}
@@ -436,6 +487,7 @@ export default function App() {
 
         {/* Interactive SVG Signal Board */}
         <div
+          ref={canvasRef}
           className={`rounded-2xl border p-4.5 shadow-sm transition ${
             isDark ? "border-slate-800 bg-slate-900/80" : "border-slate-200 bg-white shadow-xs"
           }`}
@@ -448,11 +500,17 @@ export default function App() {
                 <Layers className="h-4 w-4 text-blue-500" /> Interactive Waveform Canvas
               </h2>
               <p className={`text-[11px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                Vector timing rendering. Click any cell on the grid to change its state.
+                Click to change a cell, drag to paint, or double-click a bus segment to edit its label.
               </p>
             </div>
 
             <div className="flex gap-2 items-center flex-wrap">
+              <button type="button" disabled={diagram.config.numCycles >= MAX_TIMELINE_CYCLES}
+                className="rounded-full border px-3 py-1 text-xs font-semibold disabled:opacity-40"
+                onClick={() => { updateConfig({ numCycles: Math.min(MAX_TIMELINE_CYCLES, diagram.config.numCycles + 100) }); setTimelineEndRequest(n => n + 1); }}>
+                +100 cycles
+              </button>
+              <button type="button" className="rounded-full border px-3 py-1 text-xs font-semibold" onClick={() => setTimelineEndRequest(n => n + 1)}>Go to end</button>
               <button
                 onClick={() => setRepeatFoldOpen(!repeatFoldOpen)}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition cursor-pointer ${
@@ -474,10 +532,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => {
-                  if (confirm("Reset canvas to default initial signals?")) {
-                    setDiagram(INITIAL_DIAGRAM);
-                    showClipMessage("Canvas reset to default");
-                  }
+                  void files.run('new');
                 }}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition cursor-pointer ${
                   isDark
@@ -499,7 +554,7 @@ export default function App() {
                 <FileCode className="h-3.5 w-3.5 text-blue-500" /> Copy JSON
               </button>
               <button
-                onClick={() => setJsonPasteOpen(!jsonPasteOpen)}
+                onClick={() => { setJsonPasteOpen(!jsonPasteOpen); setPendingImport(null); setJsonImportError(null); }}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition cursor-pointer ${
                   isDark
                     ? "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700"
@@ -539,15 +594,23 @@ export default function App() {
               </span>
               <textarea
                 value={jsonPasteText}
-                onChange={(e) => setJsonPasteText(e.target.value)}
+                onChange={(e) => { setJsonPasteText(e.target.value); setJsonImportError(null); setPendingImport(null); }}
                 placeholder='{"config": {...}, "signals": [...]}'
                 className={`w-full p-2.5 h-24 rounded-lg font-mono text-xs border focus:outline-none focus:border-blue-500 ${
                   isDark ? "bg-slate-900 border-slate-700 text-slate-100" : "bg-white border-slate-300 text-slate-900"
                 }`}
               />
+              {jsonImportError && <p role="alert" className="text-xs text-rose-500">{jsonImportError}</p>}
+              {pendingImport && (
+                <div role="alert" className="flex flex-wrap items-center gap-3 text-xs text-amber-500">
+                  <span>Discard unsaved changes and load this diagram?</span>
+                  <button type="button" onClick={() => applyImport(pendingImport)} className="rounded border px-2 py-1">Discard and import</button>
+                  <button type="button" onClick={() => setPendingImport(null)} className="rounded border px-2 py-1">Keep editing</button>
+                </div>
+              )}
               <div className="flex justify-end gap-2">
                 <button
-                  onClick={() => setJsonPasteOpen(false)}
+                  onClick={() => { setJsonPasteOpen(false); setPendingImport(null); }}
                   className={`px-3 py-1 text-xs font-medium rounded-lg cursor-pointer ${
                     isDark ? "text-slate-400 hover:text-white" : "text-slate-600 hover:text-slate-900"
                   }`}
@@ -566,27 +629,45 @@ export default function App() {
 
           {/* Waveform Canvas */}
           <WaveformCanvas
+            key={documentEpoch}
             theme={theme}
             config={diagram.config}
+            timelineEndRequest={timelineEndRequest}
             signals={diagram.signals}
             markers={diagram.markers}
             constraints={diagram.constraints}
             repeatRanges={diagram.repeatRanges || []}
             folds={diagram.folds || []}
             onCanvasClick={handleCanvasCellClick}
+            activeCell={activeCell}
+            onPaintCells={paintCells}
+            onPaintStart={begin}
+            onPaintEnd={end}
+            onBusLabelEdit={openBusLabel}
             onTimelineDoubleClick={handleTimelineDoubleClick}
             onUpdateSignals={updateSignals}
             onRemoveFold={handleRemoveFold}
             onRemoveRepeatRange={handleRemoveRepeatRange}
           />
 
+          {busLabelEdit && (
+            <div role="dialog" aria-label="Edit bus label" className="mt-3 rounded-xl border border-blue-500 bg-slate-900 p-4 text-white">
+              <label className="text-sm">Bus label at cycle {busLabelEdit.cycleIndex}
+                <input autoFocus aria-label="Bus label" className="ml-3 rounded border border-slate-500 bg-slate-950 px-2 py-1" value={busLabelEdit.value}
+                  onChange={e => setBusLabelEdit({ ...busLabelEdit, value: e.target.value })}
+                  onKeyDown={e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); commitBusLabel(); } if (e.key === 'Escape') setBusLabelEdit(null); }} />
+              </label>
+              <button type="button" className="ml-3 px-2" onClick={commitBusLabel}>Apply label</button>
+              <button type="button" className="ml-3 px-2" onClick={() => setBusLabelEdit(null)}>Cancel label</button>
+            </div>
+          )}
           {/* Cell Segment Painter Floating Deck */}
           {activeCell && (() => {
             const sig = diagram.signals.find((s) => s.id === activeCell.signalId);
             if (!sig) return null;
 
             const currentWave = sig.waveStr.padEnd(diagram.config.numCycles, ".");
-            const activeStateChar = currentWave[activeCell.cycleIndex] || ".";
+            const activeStateChar = parseWaveform(currentWave, diagram.config.numCycles)[activeCell.cycleIndex];
 
             return (
               <div
@@ -628,7 +709,7 @@ export default function App() {
                         <button
                           key={`paint-${cellType.char}`}
                           disabled={isClock}
-                          onClick={() => paintCellState(cellType.char)}
+                          onClick={() => paintCellState(cellType.char as WaveState)}
                           className={`rounded-lg border px-3 py-1 text-xs font-semibold transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
                             isActive
                               ? "border-blue-600 bg-blue-600 text-white shadow-xs"
@@ -642,6 +723,7 @@ export default function App() {
                       );
                     })}
 
+                    {sig.type === 'clock' && <button type="button" className="rounded border px-3 py-1" onClick={() => updateSignals(diagram.signals.map(s => s.id === sig.id ? clockToBinary(s, diagram.config.numCycles) : s))}>Convert clock to Binary</button>}
                     <button
                       onClick={() => setActiveCell(null)}
                       className={`px-2.5 py-1 text-xs font-medium cursor-pointer ${

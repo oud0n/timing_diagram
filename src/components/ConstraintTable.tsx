@@ -28,8 +28,8 @@ export const ConstraintTable: React.FC<ConstraintTableProps> = ({
   const [style, setStyle] = useState<"dashed" | "solid">("solid");
 
   const addConstraint = () => {
-    const s1 = fromSig || (signals[0]?.id ?? "");
-    const s2 = toSig || (signals[0]?.id ?? "");
+    const s1 = (signals.some(s => s.id === fromSig) ? fromSig : "") || (signals[0]?.id ?? "");
+    const s2 = (signals.some(s => s.id === toSig) ? toSig : "") || (signals[0]?.id ?? "");
 
     if (!s1 || !s2) return;
 

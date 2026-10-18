@@ -1,4 +1,4 @@
-import { TimingDiagramData, TimeFold, RepeatRange, DiagramConfig, Signal } from "./types";
+import type { TimingDiagramData, TimeFold, RepeatRange, DiagramConfig, Signal } from "./types";
 
 /**
  * Parses a waveStr of characters ('0', '1', 'z', 'x', '=') into an array
@@ -225,6 +225,9 @@ export function verifyRepeatPattern(
   repeatCount: number,
   numCycles: number
 ): RepeatMatchResult {
+  if (![startCycle, period, repeatCount, numCycles].every(Number.isInteger) || startCycle < 0) {
+    return { valid: false, error: "Invalid repeat range", startCycle, period, repeatCount, totalCycles: period * repeatCount };
+  }
   if (repeatCount < 3) {
     return { valid: false, error: "Repeat count must be at least 3 (3回以上)", startCycle, period, repeatCount, totalCycles: period * repeatCount };
   }
@@ -246,6 +249,8 @@ export function verifyRepeatPattern(
     };
   }
 
+  const parsedStates = new Map(signals.map(sig => [sig.id, parseWaveform(sig.waveStr, numCycles)]));
+
   // Compare every iteration against the base iteration (iteration 0)
   for (let iter = 1; iter < repeatCount; iter++) {
     for (let offset = 0; offset < period; offset++) {
@@ -253,9 +258,17 @@ export function verifyRepeatPattern(
       const targetCycle = startCycle + iter * period + offset;
 
       for (const sig of signals) {
-        if (sig.type === "clock") continue; // Clocks are periodic by nature
+        if (sig.type === "clock") {
+          const cfg = sig.clockConfig || { period: 2, dutyCycle: 50, phase: 0, inverted: false };
+          // Every repeated offset must reproduce the full clock waveform, not just a sample.
+          const periods = ((targetCycle - baseCycle) / cfg.period);
+          if (Math.abs(periods - Math.round(periods)) > 1e-8) {
+            return { valid: false, error: `Clock "${sig.name}" phase mismatch`, startCycle, period, repeatCount, totalCycles, mismatchCycle: targetCycle, mismatchSignalName: sig.name };
+          }
+          continue;
+        }
 
-        const waveStates = parseWaveform(sig.waveStr, numCycles);
+        const waveStates = parsedStates.get(sig.id)!;
         const baseState = waveStates[baseCycle] || "0";
         const targetState = waveStates[targetCycle] || "0";
 
@@ -321,7 +334,21 @@ export function findRepeatingPatterns(
   maxPeriod: number = 8
 ): DetectedRepeatPattern[] {
   const results: DetectedRepeatPattern[] = [];
+  if (!signals.length) return results;
   const minRepeatCount = 3;
+  // Parse each signal once; compare only the new iteration when extending a candidate.
+  const nonClocks = signals.filter(sig => sig.type !== 'clock');
+  const states = nonClocks.map(sig => parseWaveform(sig.waveStr, numCycles));
+  const snapshots = Array.from({ length: numCycles }, (_, cycle) => JSON.stringify(nonClocks
+    .map((sig, index) => {
+      const state = states[index][cycle];
+      return [state, state === '=' ? (sig.busValues[cycle] || '').trim() : ''];
+    })));
+  const clocksMatch = (period: number) => signals.every(sig => {
+    if (sig.type !== 'clock') return true;
+    const ratio = period / (sig.clockConfig?.period || 2);
+    return Math.abs(ratio - Math.round(ratio)) < 1e-8;
+  });
 
   // Build a set or array of cycles that are already folded/repeated
   const isCycleFoldedOrRepeated = (cycle: number): boolean => {
@@ -342,6 +369,7 @@ export function findRepeatingPatterns(
   };
 
   for (let period = 1; period <= maxPeriod; period++) {
+    if (!clocksMatch(period)) continue;
     let start = 0;
     while (start + period * minRepeatCount <= numCycles) {
       // If start cycle is already folded or repeated, skip ahead
@@ -356,12 +384,15 @@ export function findRepeatingPatterns(
         if (isRangeOverlappingFoldOrRepeat(start + count * period, start + (count + 1) * period)) {
           break;
         }
-        const check = verifyRepeatPattern(signals, start, period, count + 1, numCycles);
-        if (check.valid) {
-          count++;
-        } else {
-          break;
+        let matches = true;
+        for (let offset = 0; offset < period; offset++) {
+          if (snapshots[start + offset] !== snapshots[start + count * period + offset]) {
+            matches = false;
+            break;
+          }
         }
+        if (!matches) break;
+        count++;
       }
 
       if (count >= minRepeatCount) {
@@ -383,7 +414,11 @@ export function findRepeatingPatterns(
   }
 
   // Sort and deduplicate overlapping detections by longest total coverage
-  return results.sort((a, b) => (b.endCycle - b.startCycle) - (a.endCycle - a.startCycle));
+  const selected: DetectedRepeatPattern[] = [];
+  for (const candidate of results.sort((a, b) => (b.endCycle - b.startCycle) - (a.endCycle - a.startCycle))) {
+    if (!selected.some(r => candidate.startCycle < r.endCycle && candidate.endCycle > r.startCycle)) selected.push(candidate);
+  }
+  return selected;
 }
 
 /**
