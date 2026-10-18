@@ -1,7 +1,7 @@
 # Timing Diagram
 
 タイミングチャートを SVG で作成・編集する React 19 + TypeScript + Vite アプリです。
-ブラウザ版と Tauri 2 のデスクトップ版を提供します。旧 Electron 版は `legacy-electron-app` ブランチに保持しています。
+ブラウザ版と Tauri 2 のデスクトップ版を提供します。旧 Electron 版はタグ `v3.0.1` で参照できます。
 
 > **動作確認は macOS（27.0.1 / Apple Silicon）でのみ行っています。** Windows は GitHub Actions でのビルド成功のみを確認しており、Windows・Linux での実機動作は確認していません。
 
