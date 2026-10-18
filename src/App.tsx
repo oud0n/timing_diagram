@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { NumberField } from "./components/NumberField";
 import { Signal, Marker, Constraint, DiagramConfig, TimingDiagramData, RepeatRange, TimeFold } from "./types";
 import { WaveformCanvas } from "./components/WaveformCanvas";
 import { SignalEditor } from "./components/SignalEditor";
@@ -393,13 +394,13 @@ export default function App({ gateway: injectedGateway }: { gateway?: FileGatewa
                 <label className={`block font-medium mb-1 ${isDark ? "text-slate-400" : "text-slate-600"}`}>
                   Total Cycles (2–100,000)
                 </label>
-                <input
-                  type="number"
-                  min="2"
+                <NumberField
+                  integer
+                  min={2}
                   max={MAX_TIMELINE_CYCLES}
                   aria-label="Total Cycles"
                   value={diagram.config.numCycles}
-                  onChange={(e) => updateConfig({ numCycles: Math.min(MAX_TIMELINE_CYCLES, Math.max(2, parseInt(e.target.value) || 10)) })}
+                  onCommit={(v) => updateConfig({ numCycles: v })}
                   className={`w-full rounded-lg border px-2.5 py-1.5 font-mono text-xs focus:outline-none focus:border-blue-500 ${
                     isDark ? "border-slate-750 bg-slate-950 text-slate-100" : "border-slate-200 bg-slate-50 text-slate-900"
                   }`}
@@ -410,12 +411,12 @@ export default function App({ gateway: injectedGateway }: { gateway?: FileGatewa
                 <label className={`block font-medium mb-1 ${isDark ? "text-slate-400" : "text-slate-600"}`}>
                   Cycle Width (24–200 px)
                 </label>
-                <input
-                  type="number"
-                  min="24"
-                  max="200"
+                <NumberField
+                  integer
+                  min={24}
+                  max={200}
                   value={diagram.config.cycleWidth}
-                  onChange={(e) => updateConfig({ cycleWidth: Math.min(200, Math.max(24, parseInt(e.target.value) || 65)) })}
+                  onCommit={(v) => updateConfig({ cycleWidth: v })}
                   className={`w-full rounded-lg border px-2.5 py-1.5 font-mono text-xs focus:outline-none focus:border-blue-500 ${
                     isDark ? "border-slate-750 bg-slate-950 text-slate-100" : "border-slate-200 bg-slate-50 text-slate-900"
                   }`}
@@ -426,12 +427,11 @@ export default function App({ gateway: injectedGateway }: { gateway?: FileGatewa
                 <label className={`block font-medium mb-1 ${isDark ? "text-slate-400" : "text-slate-600"}`}>
                   Time Scale Step
                 </label>
-                <input
-                  type="number"
-                  min="0.1"
-                  max="10000"
+                <NumberField
+                  min={0.1}
+                  max={10000}
                   value={diagram.config.timeScale}
-                  onChange={(e) => updateConfig({ timeScale: Math.min(10000, Math.max(0.1, parseFloat(e.target.value) || 10)) })}
+                  onCommit={(v) => updateConfig({ timeScale: v })}
                   className={`w-full rounded-lg border px-2.5 py-1.5 font-mono text-xs focus:outline-none focus:border-blue-500 ${
                     isDark ? "border-slate-750 bg-slate-950 text-slate-100" : "border-slate-200 bg-slate-50 text-slate-900"
                   }`}
@@ -796,18 +796,12 @@ export default function App({ gateway: injectedGateway }: { gateway?: FileGatewa
                         <label className={`block text-[11px] font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}>
                           Bit Width
                         </label>
-                        <input
-                          type="number"
-                          min="1"
-                          max="32"
+                        <NumberField
+                          integer
+                          min={1}
+                          max={32}
                           value={sig.busWidth || 8}
-                          onChange={(e) => {
-                            const width = parseInt(e.target.value) || 8;
-                            const updated = diagram.signals.map((s) =>
-                              s.id === sig.id ? { ...s, busWidth: width } : s
-                            );
-                            updateSignals(updated);
-                          }}
+                          onCommit={(v) => updateSignals(diagram.signals.map((s) => s.id === sig.id ? { ...s, busWidth: v } : s))}
                           className={`w-16 rounded-lg border px-2 py-1.5 font-mono text-xs focus:outline-none focus:border-amber-500 ${
                             isDark ? "border-slate-700 bg-slate-900 text-slate-100" : "border-slate-300 bg-white text-slate-900"
                           }`}

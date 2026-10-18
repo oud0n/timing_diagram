@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { NumberField } from "./NumberField";
 import { Marker, DiagramConfig } from "../types";
 import { Plus, Trash, EyeOff, Tag } from "lucide-react";
 import { formatTime } from "../timeline";
@@ -77,13 +78,12 @@ export const MarkerTable: React.FC<MarkerTableProps> = ({
           <label className={`block text-[11px] font-semibold mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
             Position (cycle)
           </label>
-          <input
-            type="number"
-            min="0"
+          <NumberField
+            min={0}
             max={config.numCycles}
             step="0.5"
             value={newTime}
-            onChange={(e) => setNewTime(parseFloat(e.target.value))}
+            onCommit={(v) => setNewTime(v)}
             className={`w-full rounded-lg border p-1.5 text-xs font-mono focus:outline-none focus:border-blue-500 ${
               isDark ? "border-slate-700 bg-slate-950 text-slate-100" : "border-slate-200 bg-slate-50 text-slate-900"
             }`}

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useMemo, useEffect } from "react";
 import { Signal, Marker, Constraint, DiagramConfig, RepeatRange, TimeFold } from "../types";
-import { parseWaveform, createTimelineCoordinateMapper, FOLD_BREAK_WIDTH } from "../utils";
+import { parseWaveform, busSegmentStarts, createTimelineCoordinateMapper, FOLD_BREAK_WIDTH } from "../utils";
 
 import { nextWaveState, visiblePaintRange, WaveState } from "../waveformEditing";
 import { formatTime, formatTimeValue, layoutMarkerLabels, MARKER_LABEL_ROW_HEIGHT } from "../timeline";
@@ -132,6 +132,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
 
   // Resolve each parent once, rather than reparsing it for every bit/cycle.
   const parsedSignals = useMemo(() => new Map(signals.map(sig => [sig.id, parseWaveform(sig.waveStr, config.numCycles)])), [signals, config.numCycles]);
+  const busStarts = useMemo(() => new Map(signals.filter(sig => sig.type !== "clock").map(sig => [sig.id, busSegmentStarts(sig.waveStr, config.numCycles)])), [signals, config.numCycles]);
   const getBitState = (sig: Signal, cycleI: number, bitIndex: number): '0' | '1' | 'z' | 'x' => {
     const waveStates = parsedSignals.get(sig.id)!;
     const cycleState = waveStates[cycleI] || "0";
@@ -140,7 +141,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
     if (cycleState === "z") return "z";
     if (cycleState === "x") return "x";
     if (cycleState === "=") {
-      const rawValue = sig.busValues[cycleI] || "0";
+      const rawValue = sig.busValues[busStarts.get(sig.id)![cycleI]] || "0";
       const num = parseBusValueToNumber(rawValue, sig.busFormat || "hex");
       if (num === null) return "x";
       return ((num >> bitIndex) & 1) === 1 ? "1" : "0";
@@ -551,11 +552,12 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
             }
             const segments: WaveSegment[] = [];
             let currentSeg: WaveSegment | null = null;
+            const segStarts = row.type === "signal" ? busStarts.get(sig.id) : undefined;
             for (let c = 0; c < config.numCycles; c++) {
               const s = waveStates[c] || "0";
               if (!currentSeg) {
                 currentSeg = { state: s, startCycle: c, endCycle: c + 1 };
-              } else if (currentSeg.state === s) {
+              } else if (currentSeg.state === s && !(s === "=" && segStarts?.[c] === c)) {
                 currentSeg.endCycle = c + 1;
               } else {
                 segments.push(currentSeg);
@@ -693,14 +695,10 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
 
                     {/* Bus value text labels */}
                     {row.type === "signal" &&
-                      Object.keys(sig.busValues).map((key) => {
-                        const cycleI = parseInt(key, 10);
-                        if (cycleI < 0 || cycleI >= config.numCycles) return null;
-                        if (waveStates[cycleI] !== "=") return null;
-                        if (isInsideFold(cycleI)) return null;
-
-                        const startX = getXForTime(cycleI);
-                        const endX = getXForTime(cycleI + 1);
+                      segments.filter((seg) => seg.state === "=" && sig.busValues[seg.startCycle] !== undefined && !isInsideFold(seg.startCycle)).map((seg) => {
+                        const cycleI = seg.startCycle;
+                        const startX = getXForTime(seg.startCycle);
+                        const endX = getXForTime(seg.endCycle);
                         const label = sig.busValues[cycleI] || "";
                         const maxChars = Math.max(2, Math.floor((endX - startX) / 8));
                         const displayLabel = label.length > maxChars ? `${label.substring(0, maxChars - 1)}…` : label;
@@ -796,7 +794,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
                     const x = (e.clientX - bounds.left) * totalWidth / bounds.width;
                     const time = xToTime(x);
                     const cycle = Math.floor(time);
-                    if (sig.type === 'bus' && x >= labelWidth + scrollLeft && time < config.numCycles && !sanitizedFolds.some(f => time >= f.start && time < f.end) && parseWaveform(sig.waveStr, config.numCycles)[cycle] === '=') onBusLabelEdit?.(sig.id, cycle);
+                    if (sig.type === 'bus' && x >= labelWidth + scrollLeft && time < config.numCycles && !sanitizedFolds.some(f => time >= f.start && time < f.end) && (busStarts.get(sig.id)?.[cycle] ?? -1) >= 0) onBusLabelEdit?.(sig.id, busStarts.get(sig.id)![cycle]);
                   }}
                 />}
               </g>
@@ -956,11 +954,12 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
 
             return (
               <g key={`marker-elm-${m.id}`} className="group cursor-col-resize">
-                <line x1={x} y1={boxY + 16} x2={x} y2={topMargin - 15} stroke={m.color} strokeWidth={1} />
+                {/* Stem stops above the tick numbers so they stay readable. */}
+                <line x1={x} y1={boxY + 16} x2={x} y2={topMargin - 25} stroke={m.color} strokeWidth={1} />
                 {m.showLine && (
                   <line
                     x1={x}
-                    y1={topMargin - 5}
+                    y1={topMargin}
                     x2={x}
                     y2={totalHeight - bottomMargin}
                     stroke={m.color}
@@ -970,7 +969,7 @@ export const WaveformCanvas: React.FC<WaveformCanvasProps> = ({
                 )}
                 <g>
                   <polygon
-                    points={`${x},${topMargin - 5} ${x - 5},${topMargin - 15} ${x + 5},${topMargin - 15}`}
+                    points={`${x},${topMargin} ${x - 4},${topMargin - 9} ${x + 4},${topMargin - 9}`}
                     fill={m.color}
                   />
                   <rect x={box.left} y={boxY} width={box.width} height={16} fill={m.color} rx={3} />

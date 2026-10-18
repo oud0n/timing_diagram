@@ -1,5 +1,5 @@
 import type { Signal, TimingDiagramData } from './types';
-import { parseWaveform } from './utils';
+import { busSegmentStarts, parseWaveform } from './utils';
 export type WaveState = '0' | '1' | '=' | 'z' | 'x';
 export function nextWaveState(signal: Signal, cycle: number, numCycles: number): WaveState {
   const state = parseWaveform(signal.waveStr, numCycles)[cycle];
@@ -7,19 +7,36 @@ export function nextWaveState(signal: Signal, cycle: number, numCycles: number):
   const order: WaveState[] = ['0', '1', '=', 'z', 'x'];
   return order[(order.indexOf(state as WaveState) + 1) % order.length];
 }
-/** Expand continuations before painting, so unchanged cells retain their displayed value. */
+/**
+ * Expand continuations before painting, so unchanged cells retain their displayed value.
+ * Bus segments keep their boundaries and labels: a contiguous run of painted '=' cells
+ * becomes one new segment, and a segment cut by a painted cell continues as its own segment.
+ */
 export function paintWaveCells(diagram: TimingDiagramData, signalId: string, cycles: number[], state: WaveState): TimingDiagramData {
   return { ...diagram, signals: diagram.signals.map(signal => {
     if (signal.id !== signalId || signal.type === 'clock') return signal;
-    const states = parseWaveform(signal.waveStr, diagram.config.numCycles);
-    const busValues = { ...signal.busValues };
-    for (const cycle of cycles) {
-      if (!Number.isInteger(cycle) || cycle < 0 || cycle >= states.length) continue;
-      states[cycle] = state;
-      if (state === '=') busValues[cycle] ??= 'DATA';
-      else delete busValues[cycle];
+    const n = diagram.config.numCycles;
+    const states = parseWaveform(signal.waveStr, n);
+    const starts = busSegmentStarts(signal.waveStr, n);
+    const painted = new Set(cycles.filter(c => Number.isInteger(c) && c >= 0 && c < n));
+    const out: string[] = [];
+    const busValues: Record<number, string> = {};
+    let prevSegment: string | null = null;
+    for (let c = 0; c < n; c++) {
+      const isPainted = painted.has(c);
+      const st = isPainted ? state : states[c];
+      let segment: string | null = null;
+      if (st === '=') segment = isPainted ? (painted.has(c - 1) && prevSegment?.startsWith('new:') ? prevSegment : `new:${c}`) : `old:${starts[c]}`;
+      if (st !== '=') out.push(st);
+      else if (segment === prevSegment) out.push('.');
+      else {
+        out.push('=');
+        const label = isPainted ? signal.busValues[c] ?? 'DATA' : signal.busValues[starts[c]];
+        if (label !== undefined) busValues[c] = label;
+      }
+      prevSegment = segment;
     }
-    return { ...signal, waveStr: states.join(''), busValues };
+    return { ...signal, waveStr: out.join(''), busValues };
   }) };
 }
 /** A cell samples the generated clock at its centre when converted to editable Binary. */

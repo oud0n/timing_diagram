@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { NumberField } from "./NumberField";
 import { MAX_TIMELINE_CYCLES } from "../timeline";
 import { Signal, SignalType, DiagramConfig } from "../types";
 import { Plus, Trash, ArrowUp, ArrowDown, Settings, HelpCircle, ChevronDown, ChevronRight } from "lucide-react";
@@ -329,13 +330,12 @@ export const SignalEditor: React.FC<SignalEditorProps> = ({
                             <span className={`block mb-1 font-medium ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                               Period (Cycles)
                             </span>
-                            <input
-                              type="number"
-                              min="0.5"
-                              max="20"
+                            <NumberField
+                              min={0.5}
+                              max={20}
                               step="0.5"
                               value={sig.clockConfig?.period || 2}
-                              onChange={(e) => updateClockConfig(sig.id, { period: parseFloat(e.target.value) })}
+                              onCommit={(v) => updateClockConfig(sig.id, { period: v })}
                               className={`w-full rounded-lg border text-xs px-2 py-1 font-mono focus:outline-none focus:border-blue-500 ${
                                 isDark ? "border-slate-700 bg-slate-900 text-slate-100" : "border-slate-200 bg-white text-slate-800"
                               }`}
@@ -346,13 +346,13 @@ export const SignalEditor: React.FC<SignalEditorProps> = ({
                             <span className={`block mb-1 font-medium ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                               Duty Cycle (%)
                             </span>
-                            <input
-                              type="number"
-                              min="10"
-                              max="90"
+                            <NumberField
+                              integer
+                              min={10}
+                              max={90}
                               step="5"
                               value={sig.clockConfig?.dutyCycle || 50}
-                              onChange={(e) => updateClockConfig(sig.id, { dutyCycle: parseInt(e.target.value) })}
+                              onCommit={(v) => updateClockConfig(sig.id, { dutyCycle: v })}
                               className={`w-full rounded-lg border text-xs px-2 py-1 font-mono focus:outline-none focus:border-blue-500 ${
                                 isDark ? "border-slate-700 bg-slate-900 text-slate-100" : "border-slate-200 bg-white text-slate-800"
                               }`}
@@ -363,13 +363,12 @@ export const SignalEditor: React.FC<SignalEditorProps> = ({
                             <span className={`block mb-1 font-medium ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                               Phase (0-1)
                             </span>
-                            <input
-                              type="number"
-                              min="0"
-                              max="1"
+                            <NumberField
+                              min={0}
+                              max={1}
                               step="0.125"
                               value={sig.clockConfig?.phase || 0}
-                              onChange={(e) => updateClockConfig(sig.id, { phase: parseFloat(e.target.value) })}
+                              onCommit={(v) => updateClockConfig(sig.id, { phase: v })}
                               className={`w-full rounded-lg border text-xs px-2 py-1 font-mono focus:outline-none focus:border-blue-500 ${
                                 isDark ? "border-slate-700 bg-slate-900 text-slate-100" : "border-slate-200 bg-white text-slate-800"
                               }`}
@@ -420,12 +419,12 @@ export const SignalEditor: React.FC<SignalEditorProps> = ({
                           <label className={`block mb-1 font-semibold ${isDark ? "text-slate-300" : "text-slate-700"}`}>
                             Bit Width
                           </label>
-                          <input
-                            type="number"
-                            min="1"
-                            max="32"
+                          <NumberField
+                            integer
+                            min={1}
+                            max={32}
                             value={sig.busWidth || 8}
-                            onChange={(e) => updateSignal(sig.id, { busWidth: Math.min(32, Math.max(1, parseInt(e.target.value) || 8)) })}
+                            onCommit={(v) => updateSignal(sig.id, { busWidth: v })}
                             className={`w-full rounded-lg border px-2.5 py-1 text-xs font-mono focus:outline-none focus:border-blue-500 ${
                               isDark ? "border-slate-700 bg-slate-900 text-slate-100" : "border-slate-200 bg-white text-slate-800"
                             }`}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { NumberField } from "./NumberField";
 import { Signal, RepeatRange, TimeFold, DiagramConfig } from "../types";
 import {
   verifyRepeatPattern,
@@ -262,12 +263,12 @@ export const RepeatFoldManager: React.FC<RepeatFoldManagerProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div>
               <label className="block text-slate-400 mb-1 font-mono font-medium">Start Cycle</label>
-              <input
-                type="number"
+              <NumberField
+                integer
                 min={0}
                 max={config.numCycles - 1}
                 value={manualStart}
-                onChange={(e) => setManualStart(parseInt(e.target.value, 10) || 0)}
+                onCommit={(v) => setManualStart(v)}
                 className={`w-full px-2.5 py-1.5 rounded-lg border font-mono ${
                   isDark
                     ? "bg-slate-800 border-slate-700 text-white"
@@ -277,12 +278,12 @@ export const RepeatFoldManager: React.FC<RepeatFoldManagerProps> = ({
             </div>
             <div>
               <label className="block text-slate-400 mb-1 font-mono font-medium">Period (Cycles)</label>
-              <input
-                type="number"
+              <NumberField
+                integer
                 min={1}
                 max={config.numCycles}
                 value={manualPeriod}
-                onChange={(e) => setManualPeriod(parseInt(e.target.value, 10) || 1)}
+                onCommit={(v) => setManualPeriod(v)}
                 className={`w-full px-2.5 py-1.5 rounded-lg border font-mono ${
                   isDark
                     ? "bg-slate-800 border-slate-700 text-white"
@@ -292,12 +293,12 @@ export const RepeatFoldManager: React.FC<RepeatFoldManagerProps> = ({
             </div>
             <div>
               <label className="block text-slate-400 mb-1 font-mono font-medium">Repeat Count (Min 3)</label>
-              <input
-                type="number"
+              <NumberField
+                integer
                 min={3}
                 max={50}
                 value={manualCount}
-                onChange={(e) => setManualCount(parseInt(e.target.value, 10) || 3)}
+                onCommit={(v) => setManualCount(v)}
                 className={`w-full px-2.5 py-1.5 rounded-lg border font-mono ${
                   isDark
                     ? "bg-slate-800 border-slate-700 text-white"
@@ -398,12 +399,12 @@ export const RepeatFoldManager: React.FC<RepeatFoldManagerProps> = ({
           <div className="flex items-end gap-3 text-xs">
             <div className="flex-1">
               <label className="block text-slate-400 mb-1 font-mono">Start Cycle</label>
-              <input
-                type="number"
+              <NumberField
+                integer
                 min={0}
                 max={config.numCycles}
                 value={foldStart}
-                onChange={(e) => setFoldStart(parseInt(e.target.value, 10) || 0)}
+                onCommit={(v) => setFoldStart(v)}
                 className={`w-full px-2.5 py-1.5 rounded-lg border font-mono ${
                   isDark
                     ? "bg-slate-800 border-slate-700 text-white"
@@ -413,12 +414,12 @@ export const RepeatFoldManager: React.FC<RepeatFoldManagerProps> = ({
             </div>
             <div className="flex-1">
               <label className="block text-slate-400 mb-1 font-mono">End Cycle</label>
-              <input
-                type="number"
+              <NumberField
+                integer
                 min={0}
                 max={config.numCycles}
                 value={foldEnd}
-                onChange={(e) => setFoldEnd(parseInt(e.target.value, 10) || 0)}
+                onCommit={(v) => setFoldEnd(v)}
                 className={`w-full px-2.5 py-1.5 rounded-lg border font-mono ${
                   isDark
                     ? "bg-slate-800 border-slate-700 text-white"

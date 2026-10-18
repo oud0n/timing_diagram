@@ -29,6 +29,29 @@ export function parseWaveform(waveStr: string, numCycles: number): string[] {
   return result;
 }
 
+/**
+ * For each cycle, the index of the cycle where its bus segment starts, or -1
+ * when the cycle is not a bus ('=') cycle. Every explicit '=' starts a new
+ * segment; '.' continues the current one, so "=.=." is two segments.
+ */
+export function busSegmentStarts(waveStr: string, numCycles: number): number[] {
+  const states = parseWaveform(waveStr, numCycles);
+  const starts: number[] = [];
+  let current = -1;
+  for (let i = 0; i < numCycles; i++) {
+    if (states[i] !== "=") current = -1;
+    else if (waveStr[i] === "=" || current < 0) current = i;
+    starts.push(current);
+  }
+  return starts;
+}
+
+/** Comparable key for a bus cycle: its segment's label, plus whether a new segment begins here. */
+export function busCellKey(sig: Signal, starts: number[], cycle: number): string {
+  const start = starts[cycle];
+  return `${start === cycle ? "|" : ""}${(sig.busValues[start] || "").trim()}`;
+}
+
 export const FOLD_BREAK_WIDTH = 44; // width in pixels for a collapsed break section
 
 export interface SanitizedFold extends TimeFold {
@@ -193,7 +216,7 @@ export function getCycleSnapshot(signals: Signal[], cycleIndex: number, numCycle
       const waveStates = parseWaveform(sig.waveStr, numCycles);
       const state = waveStates[cycleIndex] || "0";
       if (state === "=") {
-        const busVal = sig.busValues[cycleIndex] || "";
+        const busVal = busCellKey(sig, busSegmentStarts(sig.waveStr, numCycles), cycleIndex);
         parts.push(`${sig.id}:bus=${busVal}`);
       } else {
         parts.push(`${sig.id}:${state}`);
@@ -250,6 +273,7 @@ export function verifyRepeatPattern(
   }
 
   const parsedStates = new Map(signals.map(sig => [sig.id, parseWaveform(sig.waveStr, numCycles)]));
+  const parsedStarts = new Map(signals.map(sig => [sig.id, busSegmentStarts(sig.waveStr, numCycles)]));
 
   // Compare every iteration against the base iteration (iteration 0)
   for (let iter = 1; iter < repeatCount; iter++) {
@@ -286,12 +310,15 @@ export function verifyRepeatPattern(
         }
 
         if (baseState === "=") {
-          const baseVal = (sig.busValues[baseCycle] || "").trim();
-          const targetVal = (sig.busValues[targetCycle] || "").trim();
+          const starts = parsedStarts.get(sig.id)!;
+          const baseVal = busCellKey(sig, starts, baseCycle);
+          const targetVal = busCellKey(sig, starts, targetCycle);
           if (baseVal !== targetVal) {
             return {
               valid: false,
-              error: `Signal "${sig.name}" bus value mismatch at cycle ${targetCycle} (expected "${baseVal}", got "${targetVal}")`,
+              error: baseVal.replace(/^\|/, "") === targetVal.replace(/^\|/, "")
+                ? `Signal "${sig.name}" bus segment boundary mismatch at cycle ${targetCycle}`
+                : `Signal "${sig.name}" bus value mismatch at cycle ${targetCycle} (expected "${baseVal.replace(/^\|/, "")}", got "${targetVal.replace(/^\|/, "")}")`,
               startCycle,
               period,
               repeatCount,
@@ -339,10 +366,11 @@ export function findRepeatingPatterns(
   // Parse each signal once; compare only the new iteration when extending a candidate.
   const nonClocks = signals.filter(sig => sig.type !== 'clock');
   const states = nonClocks.map(sig => parseWaveform(sig.waveStr, numCycles));
+  const starts = nonClocks.map(sig => busSegmentStarts(sig.waveStr, numCycles));
   const snapshots = Array.from({ length: numCycles }, (_, cycle) => JSON.stringify(nonClocks
     .map((sig, index) => {
       const state = states[index][cycle];
-      return [state, state === '=' ? (sig.busValues[cycle] || '').trim() : ''];
+      return [state, state === '=' ? busCellKey(sig, starts[index], cycle) : ''];
     })));
   const clocksMatch = (period: number) => signals.every(sig => {
     if (sig.type !== 'clock') return true;

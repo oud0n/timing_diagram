@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { NumberField } from "./NumberField";
 import { Constraint, Signal, DiagramConfig } from "../types";
 import { Link, Plus, Trash } from "lucide-react";
 
@@ -95,13 +96,12 @@ export const ConstraintTable: React.FC<ConstraintTableProps> = ({
                     </option>
                   ))}
                 </select>
-                <input
-                  type="number"
+                <NumberField
                   step="0.5"
-                  min="0"
+                  min={0}
                   max={config.numCycles}
                   value={fromTimeVal}
-                  onChange={(e) => setFromTimeVal(parseFloat(e.target.value))}
+                  onCommit={(v) => setFromTimeVal(v)}
                   className={`w-1/2 rounded-lg border p-1.5 text-xs text-center font-mono focus:outline-none focus:border-blue-500 ${
                     isDark ? "border-slate-700 bg-slate-950 text-slate-100" : "border-slate-200 bg-slate-50 text-slate-900"
                   }`}
@@ -129,13 +129,12 @@ export const ConstraintTable: React.FC<ConstraintTableProps> = ({
                     </option>
                   ))}
                 </select>
-                <input
-                  type="number"
+                <NumberField
                   step="0.5"
-                  min="0"
+                  min={0}
                   max={config.numCycles}
                   value={toTimeVal}
-                  onChange={(e) => setToTimeVal(parseFloat(e.target.value))}
+                  onCommit={(v) => setToTimeVal(v)}
                   className={`w-1/2 rounded-lg border p-1.5 text-xs text-center font-mono focus:outline-none focus:border-blue-500 ${
                     isDark ? "border-slate-700 bg-slate-950 text-slate-100" : "border-slate-200 bg-slate-50 text-slate-900"
                   }`}
