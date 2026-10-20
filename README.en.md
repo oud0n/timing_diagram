@@ -1,24 +1,51 @@
-# Timing Diagram
+# Timing Diagram — Free Timing Diagram Editor & Waveform Drawing Tool (Browser / macOS / Windows)
 
 [日本語](README.md) | **English**
 
+[![Open in browser](https://img.shields.io/badge/Open%20in%20browser-GitHub%20Pages-2ea44f)](https://oud0n.github.io/timing_diagram/)
+[![Latest release](https://img.shields.io/github/v/release/oud0n/timing_diagram?label=download)](https://github.com/oud0n/timing_diagram/releases/latest)
 ![License](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-orange)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-oud0n-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/oud0n)
 
-A React 19 + TypeScript + Vite app for creating and editing timing diagrams as SVG.
-It comes as a browser version and a Tauri 2 desktop app. The former Electron version is available at tag `v3.0.1`.
+**Timing Diagram** is a free, interactive **timing diagram editor** for digital circuit, FPGA and embedded software design. Draw clock, binary and bus **waveforms** with clicks and drags, add markers and timing constraints between signals (setup / hold times and so on), and export the result as **SVG**. Use it to draw datasheet-style timing charts for SPI, I2C, UART and other interfaces — right in your browser, with nothing to install.
 
-> **The app has only been tested on macOS (27.0.1 / Apple Silicon).** For Windows, only a successful build on GitHub Actions has been confirmed; it has not been run on real Windows or Linux machines.
+- **Browser version (no install):** https://oud0n.github.io/timing_diagram/
+- **Desktop app (macOS / Windows):** download from [Releases](https://github.com/oud0n/timing_diagram/releases/latest)
 
-The browser version is published on GitHub Pages: https://oud0n.github.io/timing_diagram/
-
-![Editor (light theme)](./doc/images/editor-light.jpg)
+![Timing Diagram editor showing clock, data and bus waveforms (light theme)](./doc/images/editor-light.jpg)
 
 | Editing an expanded bus | Dark theme | Unsaved changes prompt |
 | --- | --- | --- |
 | ![Editing a cell of an expanded bus](./doc/images/bus-edit.jpg) | ![Dark theme](./doc/images/editor-dark.jpg) | ![Save, discard or cancel prompt on quit](./doc/images/unsaved-prompt.jpg) |
 
 The screenshots were taken during hands-on testing on 2026-10-18, using the macOS app installed from the DMG.
+
+> **The app has only been tested on macOS (27.0.1 / Apple Silicon).** For Windows, only a successful build on GitHub Actions has been confirmed; it has not been run on real Windows or Linux machines.
+
+Built with React 19 + TypeScript + Vite, with a Tauri 2 desktop app. The former Electron version is available at tag `v3.0.1`.
+
+## Features
+
+- Add, delete and reorder signals; set waveform strings, colors and line widths
+- Click a Binary cell to toggle it, cycle bus and other cells through `0 → 1 → = → z → x`, drag to paint, and type `0` / `1` on the selected cell
+- Set `0` / `1` / `z` / `x` / `=` with the Segment Painter; edits resolve continuation notation and keep the values of the following cells
+- Generate clocks from period, duty cycle and phase; use Convert clock to Binary to edit a clock directly
+- Double-click a bus cell to edit its label; Enter confirms, Escape cancels
+- The timeline extends automatically when a waveform string runs past the end; `+100 cycles` adds cycles and `Go to end` jumps to the end
+- Edit bus values, display format and bit width; expand buses into bits
+- Markers, timing constraints between signals, repeat detection and ranges, and time folds
+- Dark / light theme
+- Undo / Redo buttons and `Ctrl/Cmd+Z` / `Ctrl/Cmd+Shift+Z`
+- Copy JSON to the clipboard and load pasted JSON
+- New / Open / Save / Save As, with save, discard or cancel prompts for unsaved changes
+- Desktop menus and `Ctrl/Cmd+S`, `Ctrl/Cmd+Shift+S`, `Ctrl/Cmd+O`, `Ctrl/Cmd+E`
+- Copy or download standalone SVG files
+
+Changes to signals, settings, markers, constraints, repeats and folds share one history. Edits in an input field become one history entry when the field loses focus. Shortcuts inside input fields keep their normal text-editing behavior. The theme and the selected cell are not part of the diagram history.
+
+Deleting a signal also deletes the constraints that refer to it. Reducing the number of cycles truncates waveforms and bus values and fits markers, constraints and ranges into the new timeline. All of this can be undone.
+
+The initial 140 ns end comes from the default of 14 cycles × 10 ns. You can also extend the timeline with Total Cycles in Settings. Up to 100,000 cycles (1 ms at 10 ns steps) are supported. The limit reflects SVG width and memory use; it is not unlimited. Long diagrams thin out the tick labels and omit minor ticks. SVG export covers the whole timeline, not just the visible part.
 
 ## Download
 
@@ -27,7 +54,56 @@ Download the installers from [Releases](https://github.com/oud0n/timing_diagram/
 - macOS (Apple Silicon only): `Timing.Diagram_<version>_aarch64.dmg`
 - Windows: `Timing.Diagram_<version>_x64-setup.exe` or `Timing.Diagram_<version>_x64_en-US.msi`
 
-## Build and test
+## If macOS says the app "is damaged and can't be opened"
+
+The macOS build is for Apple Silicon (arm64) only. It does not run on Intel Macs.
+
+When you start the app from a DMG downloaded with a browser, macOS may show "“Timing Diagram” is damaged and can't be opened. You should move it to the Trash."
+
+**Cause:** This is a personal project, so the app has no Developer ID signature or notarization from the paid Apple Developer Program. macOS Gatekeeper marks downloaded files with a quarantine attribute (`com.apple.quarantine`) and blocks apps that are not notarized. The file is not actually damaged.
+
+**Fix:**
+
+1. Copy `Timing Diagram.app` from the DMG to your Applications folder (`/Applications`).
+2. Run this command in Terminal:
+
+```bash
+xattr -cr "/Applications/Timing Diagram.app"
+```
+
+- `xattr`: the standard macOS command for viewing and changing extended file attributes.
+- `-c`: removes all extended attributes. Removing the quarantine attribute (`com.apple.quarantine`) added at download lifts the Gatekeeper block.
+- `-r`: applies it recursively to every file inside the app bundle (.app).
+
+**If it still does not open:** depending on your macOS security policy, the app may still be blocked because of how it is signed. In that case, ad-hoc sign it again on your Mac:
+
+```bash
+codesign --force --deep --sign - "/Applications/Timing Diagram.app"
+```
+
+- `--force`: replaces the existing signature.
+- `--deep`: signs all code inside the bundle recursively.
+- `--sign -`: uses an ad-hoc signature (`-`) instead of a Developer ID, which allows the app to run locally on this Mac.
+
+Then double-click the app as usual, or Control-click it and choose "Open".
+
+## JSON format and unsaved state
+
+Exports use the current SVG editor format with `formatVersion: 1`. A file has the required `config`, `signals`, `markers` and `constraints`, and the optional `repeatRanges` and `folds`. Omitted optional lists are normalized to empty arrays.
+
+Unversioned JSON in the current format can still be loaded. The old Electron format is not supported. Unknown versions, invalid values, duplicate IDs and references to missing signals are rejected, and the current diagram is kept. Colors are `#RGB` or `#RRGGBB`; waveform notation is `0 1 z x = . ~ - h l` (upper case also accepted).
+
+The unsaved indicator compares the diagram with the one at startup, at load, or at the last successful save in the desktop app. Undoing back to the same diagram clears it. Copy JSON and SVG export do not change the saved state. The desktop app saves by replacing the file from a temporary file in the same directory. JSON files are limited to 16 MiB. In the browser version, Save is a download and does not mark the diagram as saved. There is no autosave.
+
+## Support the developer (Buy Me a Coffee)
+
+**Timing Diagram** is a personal project developed in spare time (free and open source). If it helps you, a coffee (from $3) goes a long way toward new editing features, fixes, and keeping the macOS app and the GitHub Pages version maintained ☕
+
+👉 **[Support oud0n on Buy Me a Coffee](https://buymeacoffee.com/oud0n)**
+
+In the app, the "Support" button in the header, or Help → Support the Developer (Buy Me a Coffee)… in the desktop menu, opens a support dialog with a QR code. The desktop app opens links in the default browser (only the support page and the GitHub repository are allowed).
+
+## Build from source
 
 Requires Node.js 24 or later and npm.
 
@@ -65,78 +141,6 @@ git push origin v4.0.0
 ```
 
 The macOS app bundle is ad-hoc signed as a whole. It has no Developer ID signature or notarization, so Gatekeeper asks for confirmation when it is opened on another Mac.
-
-## If macOS says the app "is damaged and can't be opened"
-
-The macOS build is for Apple Silicon (arm64) only. It does not run on Intel Macs.
-
-When you start the app from a DMG downloaded with a browser, macOS may show "“Timing Diagram” is damaged and can't be opened. You should move it to the Trash."
-
-**Cause:** This is a personal project, so the app has no Developer ID signature or notarization from the paid Apple Developer Program. macOS Gatekeeper marks downloaded files with a quarantine attribute (`com.apple.quarantine`) and blocks apps that are not notarized. The file is not actually damaged.
-
-**Fix:**
-
-1. Copy `Timing Diagram.app` from the DMG to your Applications folder (`/Applications`).
-2. Run this command in Terminal:
-
-```bash
-xattr -cr "/Applications/Timing Diagram.app"
-```
-
-- `xattr`: the standard macOS command for viewing and changing extended file attributes.
-- `-c`: removes all extended attributes. Removing the quarantine attribute (`com.apple.quarantine`) added at download lifts the Gatekeeper block.
-- `-r`: applies it recursively to every file inside the app bundle (.app).
-
-**If it still does not open:** depending on your macOS security policy, the app may still be blocked because of how it is signed. In that case, ad-hoc sign it again on your Mac:
-
-```bash
-codesign --force --deep --sign - "/Applications/Timing Diagram.app"
-```
-
-- `--force`: replaces the existing signature.
-- `--deep`: signs all code inside the bundle recursively.
-- `--sign -`: uses an ad-hoc signature (`-`) instead of a Developer ID, which allows the app to run locally on this Mac.
-
-Then double-click the app as usual, or Control-click it and choose "Open".
-
-## Features
-
-- Add, delete and reorder signals; set waveform strings, colors and line widths
-- Click a Binary cell to toggle it, cycle bus and other cells through `0 → 1 → = → z → x`, drag to paint, and type `0` / `1` on the selected cell
-- Set `0` / `1` / `z` / `x` / `=` with the Segment Painter; edits resolve continuation notation and keep the values of the following cells
-- Generate clocks from period, duty cycle and phase; use Convert clock to Binary to edit a clock directly
-- Double-click a bus cell to edit its label; Enter confirms, Escape cancels
-- The timeline extends automatically when a waveform string runs past the end; `+100 cycles` adds cycles and `Go to end` jumps to the end
-- Edit bus values, display format and bit width; expand buses into bits
-- Markers, timing constraints between signals, repeat detection and ranges, and time folds
-- Dark / light theme
-- Undo / Redo buttons and `Ctrl/Cmd+Z` / `Ctrl/Cmd+Shift+Z`
-- Copy JSON to the clipboard and load pasted JSON
-- New / Open / Save / Save As, with save, discard or cancel prompts for unsaved changes
-- Desktop menus and `Ctrl/Cmd+S`, `Ctrl/Cmd+Shift+S`, `Ctrl/Cmd+O`, `Ctrl/Cmd+E`
-- Copy or download standalone SVG files
-
-Changes to signals, settings, markers, constraints, repeats and folds share one history. Edits in an input field become one history entry when the field loses focus. Shortcuts inside input fields keep their normal text-editing behavior. The theme and the selected cell are not part of the diagram history.
-
-Deleting a signal also deletes the constraints that refer to it. Reducing the number of cycles truncates waveforms and bus values and fits markers, constraints and ranges into the new timeline. All of this can be undone.
-
-The initial 140 ns end comes from the default of 14 cycles × 10 ns. You can also extend the timeline with Total Cycles in Settings. Up to 100,000 cycles (1 ms at 10 ns steps) are supported. The limit reflects SVG width and memory use; it is not unlimited. Long diagrams thin out the tick labels and omit minor ticks. SVG export covers the whole timeline, not just the visible part.
-
-## JSON format and unsaved state
-
-Exports use the current SVG editor format with `formatVersion: 1`. A file has the required `config`, `signals`, `markers` and `constraints`, and the optional `repeatRanges` and `folds`. Omitted optional lists are normalized to empty arrays.
-
-Unversioned JSON in the current format can still be loaded. The old Electron format is not supported. Unknown versions, invalid values, duplicate IDs and references to missing signals are rejected, and the current diagram is kept. Colors are `#RGB` or `#RRGGBB`; waveform notation is `0 1 z x = . ~ - h l` (upper case also accepted).
-
-The unsaved indicator compares the diagram with the one at startup, at load, or at the last successful save in the desktop app. Undoing back to the same diagram clears it. Copy JSON and SVG export do not change the saved state. The desktop app saves by replacing the file from a temporary file in the same directory. JSON files are limited to 16 MiB. In the browser version, Save is a download and does not mark the diagram as saved. There is no autosave.
-
-## Support the developer (Buy Me a Coffee)
-
-**Timing Diagram** is a personal project developed in spare time (free and open source). If it helps you, a coffee (from $3) goes a long way toward new editing features, fixes, and keeping the macOS app and the GitHub Pages version maintained ☕
-
-👉 **[Support oud0n on Buy Me a Coffee](https://buymeacoffee.com/oud0n)**
-
-In the app, the "Support" button in the header, or Help → Support the Developer (Buy Me a Coffee)… in the desktop menu, opens a support dialog with a QR code. The desktop app opens links in the default browser (only the support page and the GitHub repository are allowed).
 
 ## Project structure
 
