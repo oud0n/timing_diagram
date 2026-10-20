@@ -3,15 +3,60 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Timing Diagram</title>
+    <title>Timing Diagram Editor – Free Online Timing Chart &amp; Waveform Maker (SVG) | タイミングチャート作成ツール</title>
+    <meta name="description" content="Free timing diagram editor that runs in your browser or as a macOS / Windows app. Draw digital waveforms, clocks and buses, add markers and timing constraints, and export SVG. 無料のタイミングチャート作成・編集ツール。" />
+    <meta name="keywords" content="timing diagram, timing diagram editor, timing chart, waveform editor, digital waveform, SVG, clock, bus, FPGA, Verilog, SPI, I2C, タイミングチャート, タイミング図, 波形, 作成ツール" />
+    <meta name="author" content="oud0n" />
+    <link rel="canonical" href="https://oud0n.github.io/timing_diagram/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="description" content="An interactive, professional timing diagram editor for digital circuit design and embedded software systems, featuring vector layout, multi-signal waveforms, markers, and custom text annotations." />
-    <meta property="og:title" content="Timing Diagram" />
-    <meta property="og:description" content="An interactive, professional timing diagram editor for digital circuit design and embedded software systems, featuring vector layout, multi-signal waveforms, markers, and custom text annotations." />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Timing Diagram" />
+    <meta property="og:url" content="https://oud0n.github.io/timing_diagram/" />
+    <meta property="og:title" content="Timing Diagram Editor – Free Online Timing Chart Maker" />
+    <meta property="og:description" content="Draw digital waveforms, clocks and buses in your browser, add markers and timing constraints, and export SVG. Also available as a macOS / Windows app." />
+    <meta property="og:image" content="https://oud0n.github.io/timing_diagram/og-image.jpg" />
+    <meta property="og:image:width" content="1348" />
+    <meta property="og:image:height" content="896" />
+    <meta property="og:image:alt" content="Timing Diagram editor showing clock, data and bus waveforms" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="ja_JP" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Timing Diagram Editor – Free Online Timing Chart Maker" />
+    <meta name="twitter:description" content="Draw digital waveforms, clocks and buses in your browser and export SVG." />
+    <meta name="twitter:image" content="https://oud0n.github.io/timing_diagram/og-image.jpg" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Timing Diagram",
+        "alternateName": ["Timing Diagram Editor", "タイミングチャート作成ツール"],
+        "url": "https://oud0n.github.io/timing_diagram/",
+        "image": "https://oud0n.github.io/timing_diagram/og-image.jpg",
+        "description": "Free timing diagram editor for digital waveforms, clocks and buses, with markers, timing constraints, undo/redo and SVG export.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Web browser, macOS (Apple Silicon), Windows",
+        "softwareVersion": "4.0.0",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "author": { "@type": "Person", "name": "oud0n", "url": "https://github.com/oud0n" },
+        "downloadUrl": "https://github.com/oud0n/timing_diagram/releases/latest",
+        "codeRepository": "https://github.com/oud0n/timing_diagram",
+        "license": "https://polyformproject.org/licenses/noncommercial/1.0.0/"
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Shown until React mounts; also gives crawlers readable content. -->
+      <main style="font-family: system-ui, sans-serif; max-width: 720px; margin: 48px auto; padding: 0 16px; line-height: 1.6">
+        <h1>Timing Diagram Editor</h1>
+        <p>Free timing diagram editor for digital circuit and embedded software design. Draw clocks, binary signals and buses, add markers and timing constraints between signals, detect repeated patterns, fold long time ranges, and export the diagram as SVG. Diagrams are saved as JSON.</p>
+        <p lang="ja">無料のタイミングチャート作成・編集ツールです。クロック・信号・バスの波形を描き、マーカーやタイミング制約を付けて SVG で書き出せます。</p>
+        <p><a href="https://github.com/oud0n/timing_diagram/releases/latest">Download for macOS / Windows</a> · <a href="https://github.com/oud0n/timing_diagram">Source on GitHub</a></p>
+        <noscript><p>This editor needs JavaScript. Please enable it to start drawing.</p></noscript>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-
