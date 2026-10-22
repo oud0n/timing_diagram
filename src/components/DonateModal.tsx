@@ -57,7 +57,7 @@ export const DonateModal: React.FC<DonateModalProps> = ({ isOpen, isDark, onClos
               <h2 id="donate-title" className={`flex items-center gap-1.5 text-sm font-bold ${strong}`}>
                 Support the Developer <span className="text-xs font-normal text-amber-500">(Buy Me a Coffee)</span>
               </h2>
-              <p className={`text-[11px] ${muted}`}>Help keep Timing Diagram developed and maintained</p>
+              <p className={`text-[11px] ${muted}`}>Help keep Tickwave developed and maintained</p>
             </div>
           </div>
           <button type="button" onClick={onClose} className={`cursor-pointer rounded-lg p-1.5 ${muted} hover:bg-slate-500/15`} aria-label="Close">
@@ -69,10 +69,10 @@ export const DonateModal: React.FC<DonateModalProps> = ({ isOpen, isDark, onClos
           <div className={`space-y-2 rounded-xl border p-4 ${card}`}>
             <div className="flex items-center gap-2 text-xs font-semibold text-amber-500">
               <Sparkles size={15} />
-              <span>Thank you for using Timing Diagram!</span>
+              <span>Thank you for using Tickwave!</span>
             </div>
             <p className="text-xs leading-relaxed">
-              <strong className={strong}>Timing Diagram</strong> is a free, open-source timing chart editor developed by one person in their spare time.
+              <strong className={strong}>Tickwave</strong> is a free, open-source timing chart editor developed by one person in their spare time.
               Your support keeps new features, fixes and the desktop builds going ☕
             </p>
           </div>

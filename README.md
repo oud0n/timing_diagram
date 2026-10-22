@@ -1,4 +1,4 @@
-# Timing Diagram — 無料のタイミングチャート作成・編集ツール（ブラウザ / macOS / Windows）
+# Tickwave — 無料のタイミングチャート作成・編集ツール（ブラウザ / macOS / Windows）
 
 **日本語** | [English](README.en.md)
 
@@ -7,12 +7,12 @@
 ![ライセンス](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-orange)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-oud0n-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/oud0n)
 
-**Timing Diagram** は、デジタル回路・FPGA・組込みソフトウェアの設計資料に使う**タイミングチャート（タイミング図・波形図）**を GUI で作成・編集し、**SVG** で書き出せる無料のツールです。クロック・信号・バスの波形をクリックやドラッグで描き、マーカーや信号間のタイミング制約（セットアップ／ホールド時間など）を書き込めます。SPI・I2C・UART などのインターフェース仕様書やデータシート風の図を、インストールなしでブラウザから作れます。
+**Tickwave（ティックウェーブ）** は、デジタル回路・FPGA・組込みソフトウェアの設計資料に使う**タイミングチャート（タイミング図・波形図）**を GUI で作成・編集し、**SVG** で書き出せる無料のツールです。クロック・信号・バスの波形をクリックやドラッグで描き、マーカーや信号間のタイミング制約（セットアップ／ホールド時間など）を書き込めます。SPI・I2C・UART などのインターフェース仕様書やデータシート風の図を、インストールなしでブラウザから作れます。
 
 - **ブラウザ版（インストール不要）:** https://oud0n.github.io/timing_diagram/
 - **デスクトップ版（macOS / Windows）:** [Releases](https://github.com/oud0n/timing_diagram/releases/latest) からダウンロード
 
-![タイミングチャート作成ツール Timing Diagram のエディタ画面（ライトテーマ）](./doc/images/editor-light.jpg)
+![タイミングチャート作成ツール Tickwave のエディタ画面（ライトテーマ）](./doc/images/editor-light.jpg)
 
 | 展開バスの直接編集 | ダークテーマ | 未保存変更の確認 |
 | --- | --- | --- |
@@ -22,7 +22,7 @@
 
 > **動作確認は macOS（27.0.1 / Apple Silicon）でのみ行っています。** Windows は GitHub Actions でのビルド成功のみを確認しており、Windows・Linux での実機動作は確認していません。
 
-React 19 + TypeScript + Vite で作られた Web アプリと、Tauri 2 のデスクトップ版を提供します。旧 Electron 版はタグ `v3.0.1` で参照できます。
+React 19 + TypeScript + Vite で作られた Web アプリと、Tauri 2 のデスクトップ版を提供します。
 
 ## 主な機能
 
@@ -51,24 +51,24 @@ React 19 + TypeScript + Vite で作られた Web アプリと、Tauri 2 のデ�
 
 [Releases](https://github.com/oud0n/timing_diagram/releases/latest) からインストーラをダウンロードしてください。
 
-- macOS（Apple Silicon 専用）: `Timing.Diagram_<バージョン>_aarch64.dmg`
-- Windows: `Timing.Diagram_<バージョン>_x64-setup.exe` または `Timing.Diagram_<バージョン>_x64_en-US.msi`
+- macOS（Apple Silicon 専用）: `Tickwave_<バージョン>_aarch64.dmg`
+- Windows: `Tickwave_<バージョン>_x64-setup.exe` または `Tickwave_<バージョン>_x64_en-US.msi`
 
 ## macOS で「壊れているため開けません」と表示される場合
 
 配布する macOS 版は Apple Silicon（arm64）専用です。Intel Mac では動作しません。
 
-ブラウザ等でダウンロードした DMG からアプリを起動すると、「“Timing Diagram”は壊れているため開けません。ゴミ箱に入れる必要があります。」と表示される場合があります。
+ブラウザ等でダウンロードした DMG からアプリを起動すると、「“Tickwave”は壊れているため開けません。ゴミ箱に入れる必要があります。」と表示される場合があります。
 
 **原因:** 本アプリは個人開発のため、有償の Apple Developer Program による Developer ID 署名と公証（Notarization）を付けていません。macOS の Gatekeeper は、ダウンロードしたファイルに検疫属性（`com.apple.quarantine`）を付け、公証のないアプリの起動を止めます。ファイルが実際に壊れているわけではありません。
 
 **解決方法:**
 
-1. DMG 内の `Timing Diagram.app` を「アプリケーション（/Applications）」フォルダにコピーします。
+1. DMG 内の `Tickwave.app` を「アプリケーション（/Applications）」フォルダにコピーします。
 2. ターミナルで次のコマンドを実行します。
 
 ```bash
-xattr -cr "/Applications/Timing Diagram.app"
+xattr -cr "/Applications/Tickwave.app"
 ```
 
 - `xattr`: macOS の拡張ファイル属性を表示・操作する標準コマンドです。
@@ -78,7 +78,7 @@ xattr -cr "/Applications/Timing Diagram.app"
 **それでも開かない場合:** macOS のセキュリティポリシーによっては、署名の扱いが厳しく起動できないことがあります。その場合は、手元で ad-hoc 署名をやり直してください。
 
 ```bash
-codesign --force --deep --sign - "/Applications/Timing Diagram.app"
+codesign --force --deep --sign - "/Applications/Tickwave.app"
 ```
 
 - `--force`: 既存の署名を上書きします。
@@ -97,7 +97,7 @@ codesign --force --deep --sign - "/Applications/Timing Diagram.app"
 
 ## 開発者を支援（Buy Me a Coffee）
 
-**Timing Diagram** は個人が空き時間に開発しているプロジェクトです（無料・ソースコード公開）。編集機能の追加や不具合修正、macOS 版のビルドと GitHub Pages 版の維持を続けるため、コーヒー1杯（$3〜）からのご支援をいただけると大変励みになります ☕
+**Tickwave** は個人が空き時間に開発しているプロジェクトです（無料・ソースコード公開）。編集機能の追加や不具合修正、macOS 版のビルドと GitHub Pages 版の維持を続けるため、コーヒー1杯（$3〜）からのご支援をいただけると大変励みになります ☕
 
 👉 **[Buy Me a Coffee で oud0n を支援する](https://buymeacoffee.com/oud0n)**
 
@@ -131,13 +131,13 @@ npm run desktop:build  # 配布パッケージ生成
 cargo test --locked --manifest-path src-tauri/Cargo.toml
 ```
 
-macOS の成果物は `src-tauri/target/release/bundle/macos/Timing Diagram.app` と `src-tauri/target/release/bundle/dmg/` に生成します。GitHub Actions は全ブランチへのプッシュで Web のテスト・ビルドを行い、手動実行またはバージョンタグで macOS / Windows パッケージを生成します。Windows はこのビルド成功をもって確認済みとし、実機での確認は対象外です。
+macOS の成果物は `src-tauri/target/release/bundle/macos/Tickwave.app` と `src-tauri/target/release/bundle/dmg/` に生成します。GitHub Actions は全ブランチへのプッシュで Web のテスト・ビルドを行い、手動実行またはバージョンタグで macOS / Windows パッケージを生成します。Windows はこのビルド成功をもって確認済みとし、実機での確認は対象外です。
 
-`v4.0.0` のようなタグをプッシュすると、macOS の `.dmg` と Windows の `.exe` / `.msi` を添付した GitHub Release を自動で公開します。タグは `package.json` の `version` と一致させてください（一致しないとビルドを止めます）。`v4.1.0-rc.1` のようにハイフンを含むタグはプレリリースになります。手動実行の成果物は Actions の Artifacts に残ります。
+`v1.0.0` のようなタグをプッシュすると、macOS の `.dmg` と Windows の `.exe` / `.msi` を添付した GitHub Release を自動で公開します。タグは `package.json` の `version` と一致させてください（一致しないとビルドを止めます）。`v1.1.0-rc.1` のようにハイフンを含むタグはプレリリースになります。手動実行の成果物は Actions の Artifacts に残ります。
 
 ```sh
-git tag v4.0.0
-git push origin v4.0.0
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 macOS のアプリはバンドル全体を ad-hoc 署名します。Developer ID 署名・公証はしていないため、他の Mac で開く場合は Gatekeeper の確認が必要です。

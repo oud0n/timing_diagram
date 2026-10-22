@@ -1,4 +1,4 @@
-# Timing Diagram — Free Timing Diagram Editor & Waveform Drawing Tool (Browser / macOS / Windows)
+# Tickwave — Free Timing Diagram Editor & Waveform Drawing Tool (Browser / macOS / Windows)
 
 [日本語](README.md) | **English**
 
@@ -7,12 +7,12 @@
 ![License](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-orange)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-oud0n-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/oud0n)
 
-**Timing Diagram** is a free, interactive **timing diagram editor** for digital circuit, FPGA and embedded software design. Draw clock, binary and bus **waveforms** with clicks and drags, add markers and timing constraints between signals (setup / hold times and so on), and export the result as **SVG**. Use it to draw datasheet-style timing charts for SPI, I2C, UART and other interfaces — right in your browser, with nothing to install.
+**Tickwave** is a free, interactive **timing diagram editor** for digital circuit, FPGA and embedded software design. Draw clock, binary and bus **waveforms** with clicks and drags, add markers and timing constraints between signals (setup / hold times and so on), and export the result as **SVG**. Use it to draw datasheet-style timing charts for SPI, I2C, UART and other interfaces — right in your browser, with nothing to install.
 
 - **Browser version (no install):** https://oud0n.github.io/timing_diagram/
 - **Desktop app (macOS / Windows):** download from [Releases](https://github.com/oud0n/timing_diagram/releases/latest)
 
-![Timing Diagram editor showing clock, data and bus waveforms (light theme)](./doc/images/editor-light.jpg)
+![Tickwave timing diagram editor showing clock, data and bus waveforms (light theme)](./doc/images/editor-light.jpg)
 
 | Editing an expanded bus | Dark theme | Unsaved changes prompt |
 | --- | --- | --- |
@@ -22,7 +22,7 @@ The screenshots were taken during hands-on testing on 2026-10-18, using the macO
 
 > **The app has only been tested on macOS (27.0.1 / Apple Silicon).** For Windows, only a successful build on GitHub Actions has been confirmed; it has not been run on real Windows or Linux machines.
 
-Built with React 19 + TypeScript + Vite, with a Tauri 2 desktop app. The former Electron version is available at tag `v3.0.1`.
+Built with React 19 + TypeScript + Vite, with a Tauri 2 desktop app.
 
 ## Features
 
@@ -51,24 +51,24 @@ The initial 140 ns end comes from the default of 14 cycles × 10 ns. You can als
 
 Download the installers from [Releases](https://github.com/oud0n/timing_diagram/releases/latest).
 
-- macOS (Apple Silicon only): `Timing.Diagram_<version>_aarch64.dmg`
-- Windows: `Timing.Diagram_<version>_x64-setup.exe` or `Timing.Diagram_<version>_x64_en-US.msi`
+- macOS (Apple Silicon only): `Tickwave_<version>_aarch64.dmg`
+- Windows: `Tickwave_<version>_x64-setup.exe` or `Tickwave_<version>_x64_en-US.msi`
 
 ## If macOS says the app "is damaged and can't be opened"
 
 The macOS build is for Apple Silicon (arm64) only. It does not run on Intel Macs.
 
-When you start the app from a DMG downloaded with a browser, macOS may show "“Timing Diagram” is damaged and can't be opened. You should move it to the Trash."
+When you start the app from a DMG downloaded with a browser, macOS may show "“Tickwave” is damaged and can't be opened. You should move it to the Trash."
 
 **Cause:** This is a personal project, so the app has no Developer ID signature or notarization from the paid Apple Developer Program. macOS Gatekeeper marks downloaded files with a quarantine attribute (`com.apple.quarantine`) and blocks apps that are not notarized. The file is not actually damaged.
 
 **Fix:**
 
-1. Copy `Timing Diagram.app` from the DMG to your Applications folder (`/Applications`).
+1. Copy `Tickwave.app` from the DMG to your Applications folder (`/Applications`).
 2. Run this command in Terminal:
 
 ```bash
-xattr -cr "/Applications/Timing Diagram.app"
+xattr -cr "/Applications/Tickwave.app"
 ```
 
 - `xattr`: the standard macOS command for viewing and changing extended file attributes.
@@ -78,7 +78,7 @@ xattr -cr "/Applications/Timing Diagram.app"
 **If it still does not open:** depending on your macOS security policy, the app may still be blocked because of how it is signed. In that case, ad-hoc sign it again on your Mac:
 
 ```bash
-codesign --force --deep --sign - "/Applications/Timing Diagram.app"
+codesign --force --deep --sign - "/Applications/Tickwave.app"
 ```
 
 - `--force`: replaces the existing signature.
@@ -97,7 +97,7 @@ The unsaved indicator compares the diagram with the one at startup, at load, or 
 
 ## Support the developer (Buy Me a Coffee)
 
-**Timing Diagram** is a personal project developed in spare time (free and open source). If it helps you, a coffee (from $3) goes a long way toward new editing features, fixes, and keeping the macOS app and the GitHub Pages version maintained ☕
+**Tickwave** is a personal project developed in spare time (free and open source). If it helps you, a coffee (from $3) goes a long way toward new editing features, fixes, and keeping the macOS app and the GitHub Pages version maintained ☕
 
 👉 **[Support oud0n on Buy Me a Coffee](https://buymeacoffee.com/oud0n)**
 
@@ -131,13 +131,13 @@ npm run desktop:build  # build the distribution packages
 cargo test --locked --manifest-path src-tauri/Cargo.toml
 ```
 
-On macOS the outputs are `src-tauri/target/release/bundle/macos/Timing Diagram.app` and `src-tauri/target/release/bundle/dmg/`. GitHub Actions tests and builds the web app on every push to any branch, and builds the macOS / Windows packages when run manually or on a version tag. Windows counts as verified by this successful build; testing on real Windows machines is out of scope.
+On macOS the outputs are `src-tauri/target/release/bundle/macos/Tickwave.app` and `src-tauri/target/release/bundle/dmg/`. GitHub Actions tests and builds the web app on every push to any branch, and builds the macOS / Windows packages when run manually or on a version tag. Windows counts as verified by this successful build; testing on real Windows machines is out of scope.
 
-Pushing a tag such as `v4.0.0` publishes a GitHub Release with the macOS `.dmg` and the Windows `.exe` / `.msi` attached. The tag must match the `version` in `package.json` (otherwise the build stops). Tags with a hyphen, such as `v4.1.0-rc.1`, are published as pre-releases. Outputs of manual runs stay in the Actions artifacts.
+Pushing a tag such as `v1.0.0` publishes a GitHub Release with the macOS `.dmg` and the Windows `.exe` / `.msi` attached. The tag must match the `version` in `package.json` (otherwise the build stops). Tags with a hyphen, such as `v1.1.0-rc.1`, are published as pre-releases. Outputs of manual runs stay in the Actions artifacts.
 
 ```sh
-git tag v4.0.0
-git push origin v4.0.0
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 The macOS app bundle is ad-hoc signed as a whole. It has no Developer ID signature or notarization, so Gatekeeper asks for confirmation when it is opened on another Mac.
