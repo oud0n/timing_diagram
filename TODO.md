@@ -6,7 +6,7 @@
 
 React 19 + Vite + SVG の既存エディタを基盤に、旧版の直接波形編集を統合し、Tauri のデスクトップアプリとして完成させる。アプリ内 AI 機能は導入しない。
 
-- [x] 作業ブランチ `feat/tauri-timing-diagram` を作成、旧版を `legacy-electron-app` に保持（2026-10-18 に両ブランチを削除。旧版はタグ `v3.0.1`）
+- [x] 作業ブランチ `feat/tauri-timing-diagram` を作成、旧版を `legacy-electron-app` に保持（2026-10-18 に両ブランチを削除。旧版のタグ `v3.0.1` は 2026-10-22 の Tickwave への改名時に削除）
 - [x] `timing_diagram` のフロントエンドを移植
 - [x] Gemini / Express / AI Studio の実行コード・依存を除去
 - [x] React 19 + Vite の型チェック・本番ビルド成功（2026-10-07 に再確認）

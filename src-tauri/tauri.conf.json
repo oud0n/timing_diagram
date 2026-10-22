@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Timing Diagram",
-  "version": "4.0.0",
-  "identifier": "com.timingchart.editor",
+  "productName": "Tickwave",
+  "version": "1.0.0",
+  "identifier": "com.oud0n.tickwave",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://127.0.0.1:5173",
@@ -10,7 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [{ "label": "main", "title": "Timing Diagram", "width": 1280, "height": 850, "minWidth": 640, "minHeight": 480, "visible": false }],
+    "windows": [{ "label": "main", "title": "Tickwave", "width": 1280, "height": 850, "minWidth": 640, "minHeight": 480, "visible": false }],
     "security": { "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src ipc: http://ipc.localhost" }
   },
   "bundle": {

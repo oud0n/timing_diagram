@@ -81,7 +81,7 @@ export function useDocumentFiles(options: Options) {
     return () => { disposed=true; cleanup?.(); resolver.current?.('cancel'); resolver.current=null; };
   },[options.gateway]);
   useEffect(() => {
-    void options.gateway.title(`${options.dirty?'● ':''}${path?.split(/[\\/]/).pop() || 'Untitled'} — Timing Diagram`).catch(()=>{});
+    void options.gateway.title(`${options.dirty?'● ':''}${path?.split(/[\\/]/).pop() || 'Untitled'} — Tickwave`).catch(()=>{});
   },[path,options.dirty,options.gateway]);
   useEffect(() => {
     if (options.gateway.native || !options.dirty) return;

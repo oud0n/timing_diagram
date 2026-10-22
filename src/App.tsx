@@ -287,7 +287,7 @@ export default function App({ gateway: injectedGateway }: { gateway?: FileGatewa
             </div>
             <div>
               <h1 className={`text-sm sm:text-base font-bold tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>
-                Timing Diagram
+                Tickwave
               </h1>
               <p className={`text-[11px] font-medium ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                 {files.path?.split(/[\\/]/).pop() || "Untitled"} · {dirty ? "Unsaved changes" : "Unchanged"}

@@ -109,7 +109,7 @@ fn frontend_ready(app: tauri::AppHandle, startup: tauri::State<Startup>) {
         .swap(true, std::sync::atomic::Ordering::Relaxed)
     {
         eprintln!(
-            "Timing Diagram ready in {} ms",
+            "Tickwave ready in {} ms",
             startup.started.elapsed().as_millis()
         );
     }
@@ -150,7 +150,7 @@ fn install_menu(app: &mut tauri::App) -> tauri::Result<()> {
     let app_separator = PredefinedMenuItem::separator(app)?;
     let application = Submenu::with_items(
         app,
-        "Timing Diagram",
+        "Tickwave",
         true,
         &[&about, &app_separator, &quit],
     )?;
@@ -197,5 +197,5 @@ pub fn run() {
             frontend_ready
         ])
         .run(tauri::generate_context!())
-        .expect("Failed to run Timing Diagram");
+        .expect("Failed to run Tickwave");
 }

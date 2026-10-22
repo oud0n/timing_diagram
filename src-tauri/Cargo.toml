@@ -1,13 +1,13 @@
 [package]
-name = "timing_diagram"
-version = "4.0.0"
+name = "tickwave"
+version = "1.0.0"
 description = "Timing diagram editor"
 authors = ["oud0n"]
 license-file = "../LICENSE"
 edition = "2021"
 
 [lib]
-name = "timing_diagram_lib"
+name = "tickwave_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
