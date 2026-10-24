@@ -20,3 +20,6 @@ src-tauri/target
 
 # Tauri generated schema
 src-tauri/gen
+
+# Local secrets (signing keys)
+_private/
