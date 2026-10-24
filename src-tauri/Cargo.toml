@@ -1,6 +1,6 @@
 [package]
 name = "tickwave"
-version = "1.0.0"
+version = "1.0.1"
 description = "Timing diagram editor"
 authors = ["oud0n"]
 license-file = "../LICENSE"
